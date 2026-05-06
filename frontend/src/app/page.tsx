@@ -1,48 +1,93 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
-import { StockTable } from "@/components/screener/StockTable";
-import { SectorsPanel } from "@/components/screener/SectorsPanel";
-import { api, type StockRow, type SectorItem, type Market } from "@/lib/api";
+import { api, type SectorItem, type Market } from "@/lib/api";
+
+const SECTOR_ICONS: Record<string, string> = {
+  "Bankacılık": "🏦",
+  "Enerji": "⚡",
+  "Teknoloji": "💻",
+  "Technology": "💻",
+  "Ulaştırma": "✈️",
+  "Perakende": "🛒",
+  "Consumer Discretionary": "🛍️",
+  "Consumer Staples": "🧴",
+  "Holding": "🏛️",
+  "Financials": "💰",
+  "İletişim": "📡",
+  "Communication Services": "📡",
+  "Savunma & Teknoloji": "🛡️",
+  "Otomotiv": "🚗",
+  "Tekstil": "👕",
+  "Gıda": "🌾",
+  "Healthcare": "💊",
+  "Energy": "⚡",
+  "Industrials": "🏭",
+  "Gayrimenkul": "🏢",
+  "Real Estate": "🏢",
+  "Temel Malzemeler": "⚙️",
+  "İnşaat": "🏗️",
+  "Madencilik": "⛏️",
+  "Utilities": "💡",
+  "ETF": "📊",
+};
+
+function SectorCard({ item, market, onClick }: { item: SectorItem; market: Market; onClick: () => void }) {
+  const icon = SECTOR_ICONS[item.sector] || "📈";
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: "var(--bg-card)",
+        border: "1px solid var(--border)",
+      }}
+      className="group flex items-center gap-4 px-5 py-4 rounded-xl text-left w-full transition-all hover:border-[var(--text-muted)] hover:shadow-sm cursor-pointer"
+    >
+      <span className="text-2xl shrink-0">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <p style={{ color: "var(--text-primary)" }} className="text-[14px] font-medium truncate">
+          {item.sector}
+        </p>
+        <p style={{ color: "var(--text-muted)" }} className="text-[12px] mt-0.5">
+          {item.count} hisse
+        </p>
+      </div>
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        style={{ color: "var(--text-muted)" }}
+        className="shrink-0 -translate-x-1 group-hover:translate-x-0 transition-transform"
+      >
+        <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </button>
+  );
+}
 
 export default function Home() {
+  const router = useRouter();
   const [market, setMarket] = useState<Market>("BIST");
-  const [stocks, setStocks] = useState<StockRow[]>([]);
   const [sectors, setSectors] = useState<SectorItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sectorFilter, setSectorFilter] = useState<string[] | null>(null);
 
   useEffect(() => {
     setLoading(true);
-    setSearch("");
-    setSectorFilter(null);
-    Promise.all([api.stocks(market), api.sectors(market)])
-      .then(([s, sec]) => {
-        setStocks(s);
-        setSectors(sec);
-      })
+    api.sectors(market)
+      .then(setSectors)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [market]);
 
   const filtered = useMemo(() => {
-    let list = stocks;
-    if (sectorFilter) {
-      list = list.filter((s) => sectorFilter.includes(s.ticker));
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (s) =>
-          s.ticker.toLowerCase().includes(q) ||
-          s.name.toLowerCase().includes(q) ||
-          s.sector.toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [stocks, search, sectorFilter]);
+    if (!search.trim()) return sectors;
+    const q = search.toLowerCase();
+    return sectors.filter((s) => s.sector.toLowerCase().includes(q));
+  }, [sectors, search]);
 
   return (
     <div
@@ -51,46 +96,52 @@ export default function Home() {
     >
       <Header
         market={market}
-        onMarketChange={setMarket}
+        onMarketChange={(m) => { setMarket(m); setSearch(""); }}
         search={search}
-        onSearchChange={(s) => { setSearch(s); setSectorFilter(null); }}
+        onSearchChange={setSearch}
       />
 
-      <div className="flex flex-1 overflow-hidden max-w-[1600px] w-full mx-auto">
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Stats bar */}
-          <div
-            style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)" }}
-            className="px-4 py-2 flex items-center gap-4"
-          >
-            <span style={{ color: "var(--text-muted)" }} className="text-[12px]">
-              {loading ? "Yükleniyor..." : `${filtered.length} hisse senedi`}
-            </span>
-            {sectorFilter && (
-              <button
-                onClick={() => setSectorFilter(null)}
-                style={{ color: "var(--text-muted)", border: "1px solid var(--border)" }}
-                className="text-[11px] px-2 py-0.5 rounded-full hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-              >
-                × Filtreyi temizle
-              </button>
-            )}
-          </div>
-
-          <StockTable stocks={filtered} loading={loading} />
+      <main className="flex-1 max-w-[1200px] w-full mx-auto px-6 py-8">
+        {/* Page title */}
+        <div className="mb-8">
+          <h1 style={{ color: "var(--text-primary)" }} className="text-[22px] font-semibold tracking-tight">
+            Sektörler
+          </h1>
+          <p style={{ color: "var(--text-muted)" }} className="text-[13px] mt-1">
+            {market === "BIST" ? "Borsa İstanbul" : "ABD Borsası"} — sektöre tıklayarak hisselerine ulaşın
+          </p>
         </div>
 
-        {/* Sectors panel */}
-        <SectorsPanel
-          sectors={sectors}
-          market={market}
-          onSectorClick={(tickers) => {
-            setSectorFilter(tickers);
-            setSearch("");
-          }}
-        />
-      </div>
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div
+                key={i}
+                style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
+                className="h-[72px] rounded-xl animate-pulse"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filtered.map((item) => (
+              <SectorCard
+                key={item.sector}
+                item={item}
+                market={market}
+                onClick={() => router.push(`/sector/${market}/${encodeURIComponent(item.sector)}`)}
+              />
+            ))}
+          </div>
+        )}
+
+        {!loading && filtered.length === 0 && (
+          <div className="text-center py-20" style={{ color: "var(--text-muted)" }}>
+            <p className="text-2xl mb-2">🔍</p>
+            <p>"{search}" için sektör bulunamadı</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

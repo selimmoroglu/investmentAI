@@ -140,6 +140,91 @@ def get_financials(ticker: str, statement: str = "income", freq: str = "annual")
         return None
 
 
+def get_ratios(ticker: str) -> Optional[dict]:
+    key = f"ratios:{ticker}"
+    cached = cache.get(key)
+    if cached:
+        return cached
+
+    try:
+        t = yf.Ticker(ticker)
+        info = t.info
+        if not info:
+            return None
+
+        result = {
+            # Değerleme
+            "pe": _safe_val(info.get("trailingPE")),
+            "forwardPE": _safe_val(info.get("forwardPE")),
+            "pb": _safe_val(info.get("priceToBook")),
+            "ps": _safe_val(info.get("priceToSalesTrailing12Months")),
+            "evEbitda": _safe_val(info.get("enterpriseToEbitda")),
+            "evRevenue": _safe_val(info.get("enterpriseToRevenue")),
+            "peg": _safe_val(info.get("pegRatio")),
+            # Karlılık
+            "grossMargin": _safe_val(info.get("grossMargins")),
+            "operatingMargin": _safe_val(info.get("operatingMargins")),
+            "netMargin": _safe_val(info.get("profitMargins")),
+            "ebitdaMargin": _safe_val(
+                info.get("ebitdaMargins") or
+                (info.get("ebitda") / info.get("totalRevenue") if info.get("ebitda") and info.get("totalRevenue") else None)
+            ),
+            # Verimlilik
+            "roe": _safe_val(info.get("returnOnEquity")),
+            "roa": _safe_val(info.get("returnOnAssets")),
+            # Borç/Likidite
+            "debtToEquity": _safe_val(info.get("debtToEquity")),
+            "currentRatio": _safe_val(info.get("currentRatio")),
+            "quickRatio": _safe_val(info.get("quickRatio")),
+            # Büyüme
+            "revenueGrowth": _safe_val(info.get("revenueGrowth")),
+            "earningsGrowth": _safe_val(info.get("earningsGrowth")),
+            "earningsQuarterlyGrowth": _safe_val(info.get("earningsQuarterlyGrowth")),
+            # Temettü
+            "dividendYield": _safe_val(info.get("dividendYield")),
+            "payoutRatio": _safe_val(info.get("payoutRatio")),
+            "dividendRate": _safe_val(info.get("dividendRate")),
+            # Diğer
+            "beta": _safe_val(info.get("beta")),
+            "shortRatio": _safe_val(info.get("shortRatio")),
+            "heldPercentInstitutions": _safe_val(info.get("heldPercentInstitutions")),
+        }
+        cache.set(key, result, ttl=3600)
+        return result
+    except Exception:
+        return None
+
+
+def get_sector_stats(tickers: list[str]) -> dict:
+    """Compute average P/E, P/B, EV/EBITDA for a list of tickers."""
+    key = f"sector_stats:{'|'.join(sorted(tickers[:10]))}"
+    cached = cache.get(key)
+    if cached:
+        return cached
+
+    pe_vals, pb_vals, ev_vals = [], [], []
+    for ticker in tickers:
+        ratios = get_ratios(ticker)
+        if ratios:
+            if ratios.get("pe") and ratios["pe"] > 0:
+                pe_vals.append(ratios["pe"])
+            if ratios.get("pb") and ratios["pb"] > 0:
+                pb_vals.append(ratios["pb"])
+            if ratios.get("evEbitda") and ratios["evEbitda"] > 0:
+                ev_vals.append(ratios["evEbitda"])
+
+    def avg(lst):
+        return round(sum(lst) / len(lst), 2) if lst else None
+
+    result = {
+        "avgPE": avg(pe_vals),
+        "avgPB": avg(pb_vals),
+        "avgEVEBITDA": avg(ev_vals),
+    }
+    cache.set(key, result, ttl=3600)
+    return result
+
+
 def get_technicals(ticker: str) -> Optional[dict]:
     key = f"technicals:{ticker}"
     cached = cache.get(key)

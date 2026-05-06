@@ -1,7 +1,7 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { next: { revalidate: 60 } });
+  const res = await fetch(`${BASE}${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`API error ${res.status}: ${path}`);
   return res.json();
 }
@@ -16,6 +16,9 @@ export interface StockRow {
   previousClose: number | null;
   change: number | null;
   changePercent: number | null;
+  currency?: string | null;
+  marketCap?: number | null;
+  pe?: number | null;
   volume?: number | null;
 }
 
@@ -41,6 +44,34 @@ export interface Quote {
   industry: string | null;
   exchange: string | null;
   summary: string | null;
+}
+
+export interface Ratios {
+  pe: number | null;
+  forwardPE: number | null;
+  pb: number | null;
+  ps: number | null;
+  evEbitda: number | null;
+  evRevenue: number | null;
+  peg: number | null;
+  grossMargin: number | null;
+  operatingMargin: number | null;
+  netMargin: number | null;
+  ebitdaMargin: number | null;
+  roe: number | null;
+  roa: number | null;
+  debtToEquity: number | null;
+  currentRatio: number | null;
+  quickRatio: number | null;
+  revenueGrowth: number | null;
+  earningsGrowth: number | null;
+  earningsQuarterlyGrowth: number | null;
+  dividendYield: number | null;
+  payoutRatio: number | null;
+  dividendRate: number | null;
+  beta: number | null;
+  shortRatio: number | null;
+  heldPercentInstitutions: number | null;
 }
 
 export interface OHLCVBar {
@@ -78,13 +109,29 @@ export interface SectorItem {
   tickers: string[];
 }
 
+export interface SectorStocks {
+  sector: string;
+  stocks: StockRow[];
+}
+
+export interface SectorStats {
+  sector: string;
+  avgPE: number | null;
+  avgPB: number | null;
+  avgEVEBITDA: number | null;
+}
+
 export const api = {
-  stocks: (market: Market) => get<StockRow[]>(`/api/stocks?market=${market}`),
+  sectors: (market: Market) => get<SectorItem[]>(`/api/sectors?market=${market}`),
+  sectorStocks: (sector: string, market: Market) =>
+    get<SectorStocks>(`/api/sectors/${encodeURIComponent(sector)}/stocks?market=${market}`),
+  sectorStats: (sector: string, market: Market) =>
+    get<SectorStats>(`/api/sectors/${encodeURIComponent(sector)}/stats?market=${market}`),
   quote: (ticker: string) => get<Quote>(`/api/quote/${ticker}`),
+  ratios: (ticker: string) => get<Ratios>(`/api/ratios/${ticker}`),
   history: (ticker: string, period = "6mo", interval = "1d") =>
     get<OHLCVBar[]>(`/api/history/${ticker}?period=${period}&interval=${interval}`),
   financials: (ticker: string, statement: string, freq: string) =>
     get<FinancialStatement>(`/api/financials/${ticker}?statement=${statement}&freq=${freq}`),
   technicals: (ticker: string) => get<Technicals>(`/api/technicals/${ticker}`),
-  sectors: (market: Market) => get<SectorItem[]>(`/api/sectors?market=${market}`),
 };

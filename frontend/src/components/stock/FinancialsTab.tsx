@@ -5,6 +5,7 @@ import { api, type FinancialStatement } from "@/lib/api";
 
 interface FinancialsTabProps {
   ticker: string;
+  defaultStatement?: StatementType;
 }
 
 type StatementType = "income" | "balance" | "cashflow";
@@ -26,8 +27,8 @@ function formatStatValue(v: number | null): string {
   return `${sign}${abs.toFixed(0)}`;
 }
 
-export function FinancialsTab({ ticker }: FinancialsTabProps) {
-  const [statement, setStatement] = useState<StatementType>("income");
+export function FinancialsTab({ ticker, defaultStatement = "income" }: FinancialsTabProps) {
+  const [statement, setStatement] = useState<StatementType>(defaultStatement);
   const [freq, setFreq] = useState<Freq>("annual");
   const [data, setData] = useState<FinancialStatement | null>(null);
   const [loading, setLoading] = useState(true);
