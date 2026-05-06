@@ -1,217 +1,165 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, type Quote, type OHLCVBar, type FinancialStatement } from "@/lib/api";
-import { CandlestickChart } from "@/components/charts/CandlestickChart";
-import {
-  formatPrice,
-  formatVolume,
-  formatMarketCap,
-  formatRatio,
-  formatPercent,
-  formatChange,
-  changeClass,
-} from "@/lib/formatters";
+import { api, type Quote, type FinancialStatement } from "@/lib/api";
+import { BarChart } from "@/components/charts/BarChart";
+import { LineChart } from "@/components/charts/LineChart";
+import { ValuationScore } from "./ValuationScore";
+import { formatPrice, formatVolume, formatMarketCap, formatRatio, formatPercent } from "@/lib/formatters";
 
 interface SummaryTabProps {
   ticker: string;
 }
 
-const PERIODS = [
-  { id: "1d", label: "Gün içi", interval: "5m" },
-  { id: "5d", label: "1 Hafta", interval: "1h" },
-  { id: "1mo", label: "1 Ay", interval: "1d" },
-  { id: "6mo", label: "6 Ay", interval: "1d" },
-  { id: "1y", label: "1 Yıl", interval: "1d" },
-  { id: "5y", label: "Tüm", interval: "1wk" },
-];
-
-function QuickStat({ label, value, color }: { label: string; value: string; color?: string }) {
+function QuickStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-0.5">
       <span style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wide">{label}</span>
-      <span style={{ color: color || "var(--text-primary)" }} className="text-[13px] font-medium tabular-nums mt-0.5">{value}</span>
+      <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium tabular-nums">{value}</span>
     </div>
   );
 }
 
-function FinSummaryRow({ label, vals, pct }: { label: string; vals: (number | null)[]; pct?: boolean }) {
-  const fmt = (v: number | null) => {
-    if (v == null) return "—";
-    const abs = Math.abs(v);
-    const sign = v < 0 ? "-" : "";
-    if (abs >= 1_000_000_000) return `${sign}${(abs / 1_000_000_000).toFixed(1)}B`;
-    if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(0)}K`;
-    return `${sign}${abs.toFixed(0)}`;
-  };
-  return (
-    <div
-      style={{ borderBottom: "1px solid var(--border)" }}
-      className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2.5 items-center"
-    >
-      <span style={{ color: "var(--text-secondary)" }} className="text-[12px]">{label}</span>
-      {vals.map((v, i) => (
-        <span key={i} style={{ color: "var(--text-primary)" }} className="text-[12px] tabular-nums text-right">{fmt(v)}</span>
-      ))}
-    </div>
+function parseFinRow(stmt: FinancialStatement | null, keywords: string[]): (number | null)[] {
+  if (!stmt) return [];
+  const row = stmt.rows.find((r) =>
+    keywords.some((k) => r.label.toLowerCase().includes(k.toLowerCase()))
   );
+  return row?.values ?? [];
+}
+
+function toBarData(values: (number | null)[], cols: string[], limit = 6) {
+  return cols.slice(0, limit).map((col, i) => ({
+    label: col,
+    value: values[i] ?? 0,
+  })).filter(d => d.value !== 0);
+}
+
+function toMarginSeries(numerator: (number | null)[], denominator: (number | null)[], cols: string[], limit = 8) {
+  return cols.slice(0, limit).map((col, i) => {
+    const num = numerator[i];
+    const den = denominator[i];
+    const val = num != null && den != null && den !== 0 ? (num / den) * 100 : null;
+    return { label: col, value: val ?? 0 };
+  }).filter(d => d.value !== 0).reverse();
 }
 
 export function SummaryTab({ ticker }: SummaryTabProps) {
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [history, setHistory] = useState<OHLCVBar[]>([]);
-  const [income, setIncome] = useState<FinancialStatement | null>(null);
-  const [balance, setBalance] = useState<FinancialStatement | null>(null);
-  const [period, setPeriod] = useState(PERIODS[3]);
+  const [incomeQ, setIncomeQ] = useState<FinancialStatement | null>(null);
   const [loading, setLoading] = useState(true);
-  const [histLoading, setHistLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       api.quote(ticker),
       api.financials(ticker, "income", "quarterly"),
-      api.financials(ticker, "balance", "quarterly"),
-    ]).then(([q, inc, bal]) => {
+    ]).then(([q, inc]) => {
       setQuote(q);
-      setIncome(inc);
-      setBalance(bal);
+      setIncomeQ(inc);
     }).catch(console.error).finally(() => setLoading(false));
   }, [ticker]);
-
-  useEffect(() => {
-    setHistLoading(true);
-    api.history(ticker, period.id, period.interval)
-      .then(setHistory)
-      .catch(console.error)
-      .finally(() => setHistLoading(false));
-  }, [ticker, period]);
 
   if (loading) {
     return (
       <div className="p-6 space-y-4">
-        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="h-16 rounded-xl animate-pulse" />
-        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="h-[400px] rounded-xl animate-pulse" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl h-40 animate-pulse" />
+        ))}
       </div>
     );
   }
 
   if (!quote) return <div className="p-6" style={{ color: "var(--text-muted)" }}>Veri alınamadı.</div>;
 
-  // Extract key financial rows (last 3 quarters)
-  const getRow = (stmt: FinancialStatement | null, label: string) => {
-    const row = stmt?.rows.find(r => r.label.toLowerCase().includes(label.toLowerCase()));
-    return row?.values.slice(0, 3) ?? [null, null, null];
-  };
+  // Parse quarterly financial data
+  const cols = incomeQ?.columns ?? [];
+  const revenue = parseFinRow(incomeQ, ["Total Revenue", "Revenue"]);
+  const grossProfit = parseFinRow(incomeQ, ["Gross Profit"]);
+  const operatingIncome = parseFinRow(incomeQ, ["Operating Income", "Ebit"]);
+  const netIncome = parseFinRow(incomeQ, ["Net Income"]);
+  const ebitda = parseFinRow(incomeQ, ["EBITDA"]);
 
-  const cols = income?.columns?.slice(0, 3) ?? [];
+  const revenueBar = toBarData(revenue, cols, 6);
+  const ebitdaBar = toBarData(ebitda.length ? ebitda : operatingIncome, cols, 6);
+  const netIncomeBar = toBarData(netIncome, cols, 6);
+
+  const grossMarginLine = toMarginSeries(grossProfit, revenue, cols, 8);
+  const opMarginLine = toMarginSeries(operatingIncome, revenue, cols, 8);
+  const netMarginLine = toMarginSeries(netIncome, revenue, cols, 8);
+
+  const hasCharts = revenueBar.length > 1;
+  const hasMargins = grossMarginLine.length > 1;
 
   return (
-    <div className="flex flex-col">
+    <div className="p-5 space-y-5 max-w-[1100px]">
       {/* Quick stats bar */}
-      <div
-        style={{ background: "var(--bg-secondary)", borderBottom: "1px solid var(--border)" }}
-        className="px-5 py-3 flex flex-wrap gap-6"
-      >
+      <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl px-5 py-4 flex flex-wrap gap-6">
         <QuickStat label="Önceki Kapanış" value={formatPrice(quote.previousClose, quote.currency)} />
         <QuickStat label="52H Yüksek" value={formatPrice(quote.fiftyTwoWeekHigh, quote.currency)} />
         <QuickStat label="52H Düşük" value={formatPrice(quote.fiftyTwoWeekLow, quote.currency)} />
-        <QuickStat label="Hacim" value={formatVolume(quote.volume)} />
-        <QuickStat label="Ort. Hacim" value={formatVolume(quote.avgVolume)} />
+        <QuickStat label="Günlük Hacim" value={formatVolume(quote.volume)} />
+        <QuickStat label="Ort. Hacim (3A)" value={formatVolume(quote.avgVolume)} />
         <QuickStat label="Piyasa Değeri" value={formatMarketCap(quote.marketCap, quote.currency)} />
-        <QuickStat label="F/K" value={formatRatio(quote.pe)} />
-        <QuickStat label="HBK" value={formatRatio(quote.eps)} />
+        <QuickStat label="F/K Oranı" value={formatRatio(quote.pe)} />
+        <QuickStat label="HBK (EPS)" value={formatRatio(quote.eps)} />
+        <QuickStat label="Temettü Getirisi" value={formatPercent(quote.dividendYield)} />
+        <QuickStat label="Beta" value={formatRatio(quote.beta)} />
       </div>
 
-      {/* Period buttons */}
-      <div
-        style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-card)" }}
-        className="px-5 py-2.5 flex items-center gap-2 flex-wrap"
-      >
-        {PERIODS.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setPeriod(p)}
-            style={{
-              background: period.id === p.id ? "var(--bg-tertiary)" : "transparent",
-              color: period.id === p.id ? "var(--text-primary)" : "var(--text-muted)",
-              border: period.id === p.id ? "1px solid var(--border)" : "1px solid transparent",
-            }}
-            className="px-3 py-1 rounded-lg text-[12px] font-medium transition-all cursor-pointer"
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Chart */}
-      <div style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }}>
-        {histLoading ? (
-          <div style={{ background: "var(--bg-secondary)", height: 380 }} className="animate-pulse" />
-        ) : (
-          <CandlestickChart data={history} height={380} />
-        )}
-      </div>
-
-      {/* Financial summary */}
-      {(income?.rows.length || balance?.rows.length) ? (
-        <div className="p-5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Income summary */}
-            {income && income.rows.length > 0 && (
-              <div style={{ border: "1px solid var(--border)" }} className="rounded-xl overflow-hidden">
-                <div style={{ background: "var(--bg-secondary)", borderBottom: "1px solid var(--border)" }}
-                  className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2.5"
-                >
-                  <span style={{ color: "var(--text-primary)" }} className="text-[12px] font-semibold">Özet Gelir Tablosu</span>
-                  {cols.map(c => (
-                    <span key={c} style={{ color: "var(--text-muted)" }} className="text-[11px] tabular-nums text-right">{c}</span>
-                  ))}
+      {/* Quarterly bar charts */}
+      {hasCharts && (
+        <div>
+          <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">Çeyreklik Veriler</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { title: "Çeyreklik Satışlar", data: revenueBar, color: "var(--chart-blue)" },
+              { title: "Çeyreklik FAVÖK", data: ebitdaBar, color: "var(--chart-blue)" },
+              { title: "Çeyreklik Net Kar", data: netIncomeBar, color: netIncomeBar.some(d => d.value < 0) ? undefined : "var(--chart-blue)" },
+            ].map(({ title, data, color }) => (
+              data.length > 0 && (
+                <div key={title} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl p-4">
+                  <p style={{ color: "var(--text-secondary)" }} className="text-[12px] font-medium mb-3">{title}</p>
+                  <BarChart data={data} color={color} height={130} />
                 </div>
-                {[
-                  ["Total Revenue", "Toplam Gelir"],
-                  ["Gross Profit", "Brüt Kar"],
-                  ["Operating Income", "Faaliyet Karı"],
-                  ["Net Income", "Net Kar"],
-                ].map(([key, label]) => (
-                  <FinSummaryRow key={key} label={label} vals={getRow(income, key)} />
-                ))}
-              </div>
-            )}
-
-            {/* Balance summary */}
-            {balance && balance.rows.length > 0 && (
-              <div style={{ border: "1px solid var(--border)" }} className="rounded-xl overflow-hidden">
-                <div style={{ background: "var(--bg-secondary)", borderBottom: "1px solid var(--border)" }}
-                  className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2.5"
-                >
-                  <span style={{ color: "var(--text-primary)" }} className="text-[12px] font-semibold">Özet Bilanço</span>
-                  {cols.map(c => (
-                    <span key={c} style={{ color: "var(--text-muted)" }} className="text-[11px] tabular-nums text-right">{c}</span>
-                  ))}
-                </div>
-                {[
-                  ["Total Assets", "Toplam Varlıklar"],
-                  ["Total Debt", "Toplam Borç"],
-                  ["Stockholders Equity", "Özsermaye"],
-                  ["Cash", "Nakit"],
-                ].map(([key, label]) => (
-                  <FinSummaryRow key={key} label={label} vals={getRow(balance, key)} />
-                ))}
-              </div>
-            )}
+              )
+            ))}
           </div>
         </div>
-      ) : null}
+      )}
 
-      {/* Company summary */}
-      {quote.summary && (
-        <div className="px-5 pb-5">
-          <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl p-4">
-            <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wide mb-2">Şirket Hakkında</p>
-            <p style={{ color: "var(--text-secondary)", lineHeight: "1.7" }} className="text-[13px]">{quote.summary}</p>
+      {/* Margin trend charts */}
+      {hasMargins && (
+        <div>
+          <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">Karlılık Marjı Trendi (%)</p>
+          <div className="grid grid-cols-1 gap-4">
+            {[
+              { title: "Brüt Kar Marjı", data: grossMarginLine, color: "var(--chart-gold)" },
+              { title: "Esas Faaliyet Kar Marjı", data: opMarginLine, color: "var(--chart-gold)" },
+              { title: "Net Kar Marjı", data: netMarginLine, color: "var(--chart-pink)" },
+            ].map(({ title, data, color }) => (
+              data.length > 1 && (
+                <div key={title} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl p-4">
+                  <p style={{ color: "var(--text-secondary)" }} className="text-[12px] font-medium mb-2">{title}</p>
+                  <LineChart data={data} color={color} height={150} unit="%" formatY={(v) => v.toFixed(1) + "%"} />
+                </div>
+              )
+            ))}
           </div>
+        </div>
+      )}
+
+      {/* Valuation score */}
+      <div>
+        <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">Değerleme</p>
+        <ValuationScore ticker={ticker} />
+      </div>
+
+      {/* Company description */}
+      {quote.summary && (
+        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl p-5">
+          <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wide mb-2">Şirket Hakkında</p>
+          <p style={{ color: "var(--text-secondary)", lineHeight: "1.7" }} className="text-[13px]">{quote.summary}</p>
         </div>
       )}
     </div>
