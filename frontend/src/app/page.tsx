@@ -90,6 +90,18 @@ export default function Home() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          {/* Yatırım Üstadları */}
+          <Link
+            href="/legends"
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-all"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+            </svg>
+            Yatırım Üstadları
+          </Link>
+
           {/* Screener button */}
           <Link
             href="/screener"

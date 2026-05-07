@@ -148,6 +148,32 @@ export interface SectorStats {
   ratedCount: number;
 }
 
+export interface LegendMatch {
+  ticker: string;
+  name: string;
+  sector: string | null;
+  currentPrice: number | null;
+  changePercent: number | null;
+  currency: string | null;
+  marketCap: number | null;
+  pe: number | null;
+  pb: number | null;
+  roe: number | null;
+  netMargin: number | null;
+  debtToEquity: number | null;
+  revenueGrowth: number | null;
+  earningsGrowth: number | null;
+  peg: number | null;
+  dividendYield: number | null;
+  score: number;
+}
+
+export interface LegendMatches {
+  strategy: string;
+  market: Market;
+  matches: LegendMatch[];
+}
+
 export interface IndexQuote {
   ticker: string;
   label: string;
@@ -171,4 +197,6 @@ export const api = {
     get<FinancialStatement>(`/api/financials/${ticker}?statement=${statement}&freq=${freq}`),
   technicals: (ticker: string) => get<Technicals>(`/api/technicals/${ticker}`),
   indices: () => get<IndexQuote[]>(`/api/indices`),
+  legendMatches: (strategyId: string, market: Market, limit = 20) =>
+    get<LegendMatches>(`/api/legends/${strategyId}/matches?market=${market}&limit=${limit}`),
 };
