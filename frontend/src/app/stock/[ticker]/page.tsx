@@ -9,6 +9,7 @@ import { TechnicalTab } from "@/components/stock/TechnicalTab";
 import { RatiosTab } from "@/components/stock/RatiosTab";
 import { formatPrice, formatChange, changeClass } from "@/lib/formatters";
 import { useTheme } from "@/components/layout/ThemeProvider";
+import { useWatchlist } from "@/lib/watchlist";
 
 interface PageProps {
   params: Promise<{ ticker: string }>;
@@ -16,9 +17,7 @@ interface PageProps {
 
 type NavSection =
   | "summary"
-  | "financials-income"
-  | "financials-balance"
-  | "financials-cashflow"
+  | "financials"
   | "ratios"
   | "technical";
 
@@ -26,7 +25,6 @@ interface NavItem {
   id: NavSection;
   label: string;
   icon: React.ReactNode;
-  parent?: string;
 }
 
 const ChartIcon = () => (
@@ -62,9 +60,7 @@ const SummaryIcon = () => (
 
 const NAV_ITEMS: NavItem[] = [
   { id: "summary", label: "Özet Rapor", icon: <SummaryIcon /> },
-  { id: "financials-income", label: "Gelir Tablosu", icon: <TableIcon />, parent: "Finansal Tablolar" },
-  { id: "financials-balance", label: "Bilanço", icon: <TableIcon />, parent: "Finansal Tablolar" },
-  { id: "financials-cashflow", label: "Nakit Akım Tablosu", icon: <TableIcon />, parent: "Finansal Tablolar" },
+  { id: "financials", label: "Finansal Tablolar", icon: <TableIcon /> },
   { id: "ratios", label: "Finansal Oranlar", icon: <RatioIcon /> },
   { id: "technical", label: "Teknik Analiz", icon: <TechIcon /> },
 ];
@@ -74,19 +70,14 @@ export default function StockPage({ params }: PageProps) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [active, setActive] = useState<NavSection>("summary");
   const { theme, toggle } = useTheme();
+  const { has: isInWatchlist, toggle: toggleWatch } = useWatchlist();
+  const inWatchlist = isInWatchlist(ticker);
 
   useEffect(() => {
     api.quote(ticker).then(setQuote).catch(console.error);
   }, [ticker]);
 
   const displayTicker = ticker.replace(".IS", "");
-
-  // Group nav items
-  const grouped: { group?: string; items: NavItem[] }[] = [
-    { items: NAV_ITEMS.filter(n => !n.parent && n.id === "summary") },
-    { group: "Finansal Tablolar", items: NAV_ITEMS.filter(n => n.parent === "Finansal Tablolar") },
-    { items: NAV_ITEMS.filter(n => !n.parent && n.id !== "summary") },
-  ];
 
   return (
     <div
@@ -147,6 +138,22 @@ export default function StockPage({ params }: PageProps) {
           )}
 
           <button
+            onClick={() => toggleWatch({ ticker, name: quote?.name || undefined })}
+            title={inWatchlist ? "Takipten çıkar" : "Takibe ekle"}
+            style={{
+              background: inWatchlist ? "var(--up-bg)" : "var(--bg-secondary)",
+              border: `1px solid ${inWatchlist ? "var(--up)" : "var(--border)"}`,
+              color: inWatchlist ? "var(--up)" : "var(--text-secondary)",
+            }}
+            className="h-8 px-2.5 flex items-center gap-1.5 rounded-lg cursor-pointer shrink-0 text-[12px] font-medium hover:text-[var(--text-primary)] transition-all"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill={inWatchlist ? "currentColor" : "none"}>
+              <path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.62L12 2L9.19 8.62L2 9.24L7.46 13.97L5.82 21L12 17.27Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+            </svg>
+            <span className="hidden sm:inline">{inWatchlist ? "Takipte" : "Takibe Al"}</span>
+          </button>
+
+          <button
             onClick={toggle}
             style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
             className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer shrink-0"
@@ -167,29 +174,9 @@ export default function StockPage({ params }: PageProps) {
           style={{ background: "var(--bg-card)", borderRight: "1px solid var(--border)", width: 220, minWidth: 220 }}
           className="hidden md:flex flex-col py-3 overflow-y-auto sticky top-14 h-[calc(100vh-56px)]"
         >
-          {/* Summary */}
-          <SidebarItem
-            item={NAV_ITEMS[0]}
-            active={active}
-            onClick={setActive}
-          />
-
-          {/* Finansal Tablolar group */}
-          <div className="mt-2">
-            <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider px-4 py-1.5 font-medium">
-              Finansal Tablolar
-            </p>
-            {NAV_ITEMS.filter(n => n.parent === "Finansal Tablolar").map(item => (
-              <SidebarItem key={item.id} item={item} active={active} onClick={setActive} indent />
-            ))}
-          </div>
-
-          {/* Other items */}
-          <div className="mt-2">
-            {NAV_ITEMS.filter(n => !n.parent && n.id !== "summary").map(item => (
-              <SidebarItem key={item.id} item={item} active={active} onClick={setActive} />
-            ))}
-          </div>
+          {NAV_ITEMS.map((item) => (
+            <SidebarItem key={item.id} item={item} active={active} onClick={setActive} />
+          ))}
         </aside>
 
         {/* Mobile nav */}
@@ -216,9 +203,7 @@ export default function StockPage({ params }: PageProps) {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
           {active === "summary" && <SummaryTab ticker={ticker} />}
-          {active === "financials-income" && <FinancialsTab ticker={ticker} defaultStatement="income" />}
-          {active === "financials-balance" && <FinancialsTab ticker={ticker} defaultStatement="balance" />}
-          {active === "financials-cashflow" && <FinancialsTab ticker={ticker} defaultStatement="cashflow" />}
+          {active === "financials" && <FinancialsTab ticker={ticker} />}
           {active === "ratios" && <RatiosTab ticker={ticker} />}
           {active === "technical" && <TechnicalTab ticker={ticker} />}
         </main>
@@ -231,12 +216,10 @@ function SidebarItem({
   item,
   active,
   onClick,
-  indent = false,
 }: {
   item: NavItem;
   active: NavSection;
   onClick: (id: NavSection) => void;
-  indent?: boolean;
 }) {
   const isActive = active === item.id;
   return (
@@ -247,7 +230,7 @@ function SidebarItem({
         color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
         borderLeft: isActive ? "2px solid var(--text-primary)" : "2px solid transparent",
       }}
-      className={`w-full flex items-center gap-3 py-2.5 text-[13px] font-medium transition-all cursor-pointer hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] ${indent ? "pl-7 pr-4" : "px-4"}`}
+      className="w-full flex items-center gap-3 py-2.5 px-4 text-[13px] font-medium transition-all cursor-pointer hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
     >
       <span style={{ opacity: isActive ? 1 : 0.6 }}>{item.icon}</span>
       {item.label}

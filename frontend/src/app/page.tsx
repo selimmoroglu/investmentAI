@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import { api, type SectorItem, type StockRow, type Market } from "@/lib/api";
 import { formatChange, formatMarketCap, changeClass } from "@/lib/formatters";
+import { WatchlistPanel } from "@/components/watchlist/WatchlistPanel";
 
 export default function Home() {
   const router = useRouter();
@@ -243,6 +244,9 @@ export default function Home() {
             </>
           )}
         </main>
+
+        {/* Right watchlist panel */}
+        <WatchlistPanel />
       </div>
     </div>
   );
