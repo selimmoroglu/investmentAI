@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* Dark mode is DEFAULT — no JS needed for initial render */
-:root {
+/* Dark mode */
+:root, [data-theme="dark"] {
   --bg-primary: #0d0d0f;
   --bg-secondary: #161618;
   --bg-tertiary: #222226;
@@ -19,7 +19,7 @@
   --chart-pink: #f472b6;
 }
 
-/* Light mode as VARIANT */
+/* Light mode */
 [data-theme="light"] {
   --bg-primary: #f7f7f8;
   --bg-secondary: #ffffff;
@@ -44,7 +44,7 @@
   padding: 0;
 }
 
-html {
+html, [data-theme="dark"] {
   color-scheme: dark;
 }
 

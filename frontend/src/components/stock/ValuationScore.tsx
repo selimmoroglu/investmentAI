@@ -14,13 +14,30 @@ interface ScoreComponent {
   positive: boolean;
 }
 
-function computeScore(r: Ratios): { score: number; components: ScoreComponent[]; label: string; color: string } {
+interface ScoreResult {
+  score: number | null;
+  components: ScoreComponent[];
+  label: string;
+  color: string;
+}
+
+function computeScore(r: Ratios): ScoreResult {
+  // Need at least one of P/E, P/B, EV/EBITDA to produce a meaningful score
+  const hasCore =
+    (r.pe != null && r.pe > 0) ||
+    (r.pb != null && r.pb > 0) ||
+    (r.evEbitda != null && r.evEbitda > 0);
+
+  if (!hasCore) {
+    return { score: null, components: [], label: "Veri Yetersiz", color: "var(--text-muted)" };
+  }
+
   const components: ScoreComponent[] = [];
   let score = 0;
 
-  // P/E contribution (0-30 points → pahalı)
+  // P/E contribution (0-25 points → pahalı)
   if (r.pe != null && r.pe > 0) {
-    const c = Math.min(r.pe / 50, 1) * 30;
+    const c = Math.min(r.pe / 50, 1) * 25;
     score += c;
     components.push({
       label: "F/K Oranı",
@@ -54,6 +71,30 @@ function computeScore(r: Ratios): { score: number; components: ScoreComponent[];
     });
   }
 
+  // P/S contribution (0-15 points)
+  if (r.ps != null && r.ps > 0) {
+    const c = Math.min(r.ps / 8, 1) * 15;
+    score += c;
+    components.push({
+      label: "PD/Satış (P/S)",
+      contribution: c,
+      detail: `${r.ps.toFixed(2)}x — ${r.ps < 1.5 ? "Düşük" : r.ps < 4 ? "Makul" : "Yüksek"}`,
+      positive: r.ps < 3,
+    });
+  }
+
+  // Debt/Equity risk factor (yüksek borç pahalılığı artırır)
+  if (r.debtToEquity != null && r.debtToEquity > 100) {
+    const c = Math.min((r.debtToEquity - 100) / 200, 1) * 5;
+    score += c;
+    components.push({
+      label: "Borç/Özsermaye",
+      contribution: c,
+      detail: `${r.debtToEquity.toFixed(0)}% — yüksek kaldıraç riski`,
+      positive: false,
+    });
+  }
+
   // Net margin bonus (reduces pahalılık — iyi şirket haklı)
   if (r.netMargin != null && r.netMargin > 0) {
     const bonus = r.netMargin * 30;
@@ -62,6 +103,18 @@ function computeScore(r: Ratios): { score: number; components: ScoreComponent[];
       label: "Net Kar Marjı",
       contribution: -bonus,
       detail: `%${(r.netMargin * 100).toFixed(1)} — kaliteli kazanç fiyatı destekliyor`,
+      positive: true,
+    });
+  }
+
+  // Gross margin quality bonus
+  if (r.grossMargin != null && r.grossMargin > 0.4) {
+    const bonus = 5;
+    score -= bonus;
+    components.push({
+      label: "Brüt Kar Marjı",
+      contribution: -bonus,
+      detail: `%${(r.grossMargin * 100).toFixed(1)} — yüksek brüt marj kalite göstergesi`,
       positive: true,
     });
   }
@@ -92,7 +145,7 @@ function computeScore(r: Ratios): { score: number; components: ScoreComponent[];
 
   const finalScore = Math.max(0, Math.min(100, Math.round(score)));
 
-  let label = "Ucuz";
+  let label = "Cazip";
   let color = "var(--up)";
   if (finalScore >= 70) { label = "Çok Pahalı"; color = "#ef4444"; }
   else if (finalScore >= 50) { label = "Pahalı"; color = "#f97316"; }
@@ -121,13 +174,23 @@ export function ValuationScore({ ticker }: ValuationScoreProps) {
 
   const { score, components, label, color } = computeScore(ratios);
 
+  // Insufficient data state
+  if (score === null) {
+    return (
+      <div style={{ border: "1px solid var(--border)", background: "var(--bg-card)" }} className="rounded-xl p-6 text-center">
+        <p style={{ color: "var(--text-primary)" }} className="text-[13px] font-semibold mb-1">Pahalılık Skoru</p>
+        <p style={{ color: "var(--text-muted)" }} className="text-[12px]">Bu hisse için değerleme verisi yetersiz (F/K, PD/DD, FD/FAVÖK bulunamadı).</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ border: "1px solid var(--border)" }} className="rounded-xl overflow-hidden">
       {/* Header */}
       <div style={{ background: "var(--bg-secondary)", borderBottom: "1px solid var(--border)" }} className="px-5 py-3 flex items-center justify-between">
         <div>
           <p style={{ color: "var(--text-primary)" }} className="text-[13px] font-semibold">Pahalılık Skoru</p>
-          <p style={{ color: "var(--text-muted)" }} className="text-[11px] mt-0.5">F/K, PD/DD, marjlar ve büyüme baz alınarak hesaplanır</p>
+          <p style={{ color: "var(--text-muted)" }} className="text-[11px] mt-0.5">F/K, PD/DD, P/S, marjlar, büyüme ve borç baz alınarak hesaplanır</p>
         </div>
         <div className="text-right">
           <p style={{ color, fontSize: 28, fontWeight: 700, lineHeight: 1 }} className="tabular-nums">{score}</p>
