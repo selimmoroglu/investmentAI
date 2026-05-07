@@ -7,6 +7,7 @@ import { useTheme } from "@/components/layout/ThemeProvider";
 import { api, type SectorItem, type StockRow, type Market } from "@/lib/api";
 import { formatChange, formatMarketCap, changeClass } from "@/lib/formatters";
 import { WatchlistPanel } from "@/components/watchlist/WatchlistPanel";
+import { IndicesBar } from "@/components/layout/IndicesBar";
 
 export default function Home() {
   const router = useRouter();
@@ -164,6 +165,9 @@ export default function Home() {
 
         {/* Main content area */}
         <main className="flex-1 flex flex-col overflow-hidden">
+          {/* Indices bar */}
+          <IndicesBar />
+
           {!selectedSector ? (
             // Welcome state
             <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "var(--text-muted)" }}>

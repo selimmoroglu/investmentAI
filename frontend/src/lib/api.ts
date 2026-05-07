@@ -121,6 +121,15 @@ export interface SectorStats {
   avgEVEBITDA: number | null;
 }
 
+export interface IndexQuote {
+  ticker: string;
+  label: string;
+  group: "index" | "fx" | "commodity" | "crypto";
+  price: number | null;
+  previousClose: number | null;
+  changePercent: number | null;
+}
+
 export const api = {
   sectors: (market: Market) => get<SectorItem[]>(`/api/sectors?market=${market}`),
   sectorStocks: (sector: string, market: Market) =>
@@ -134,4 +143,5 @@ export const api = {
   financials: (ticker: string, statement: string, freq: string) =>
     get<FinancialStatement>(`/api/financials/${ticker}?statement=${statement}&freq=${freq}`),
   technicals: (ticker: string) => get<Technicals>(`/api/technicals/${ticker}`),
+  indices: () => get<IndexQuote[]>(`/api/indices`),
 };

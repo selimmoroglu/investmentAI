@@ -369,13 +369,6 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
         <ValuationScore ticker={ticker} />
       </div>
 
-      {/* Company description */}
-      {quote.summary && (
-        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl p-5">
-          <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wide mb-2">Şirket Hakkında</p>
-          <p style={{ color: "var(--text-secondary)", lineHeight: "1.7" }} className="text-[13px]">{quote.summary}</p>
-        </div>
-      )}
     </div>
   );
 }

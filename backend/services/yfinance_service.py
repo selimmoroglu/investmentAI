@@ -17,6 +17,23 @@ def _safe_val(val):
         return None
 
 
+def _normalize_div_yield(info: dict):
+    """yfinance bazen dividendYield'i decimal (0.024) bazen yüzde (2.4) döndürür.
+    Frontend her zaman *100 yaptığı için decimal'a normalize ediyoruz."""
+    raw = _safe_val(info.get("dividendYield"))
+    if raw is None:
+        # fallback: dividendRate / currentPrice
+        rate = _safe_val(info.get("dividendRate"))
+        price = _safe_val(info.get("currentPrice") or info.get("regularMarketPrice"))
+        if rate is not None and price and price > 0:
+            return rate / price
+        return None
+    # 1'den büyükse yfinance % olarak vermiş demektir → decimal'a çevir
+    if raw > 1:
+        return raw / 100
+    return raw
+
+
 def get_quote(ticker: str) -> Optional[dict]:
     key = f"quote:{ticker}"
     cached = cache.get(key)
@@ -48,7 +65,7 @@ def get_quote(ticker: str) -> Optional[dict]:
             "pe": _safe_val(info.get("trailingPE")),
             "forwardPE": _safe_val(info.get("forwardPE")),
             "eps": _safe_val(info.get("trailingEps")),
-            "dividendYield": _safe_val(info.get("dividendYield")),
+            "dividendYield": _normalize_div_yield(info),
             "beta": _safe_val(info.get("beta")),
             "fiftyTwoWeekHigh": _safe_val(info.get("fiftyTwoWeekHigh")),
             "fiftyTwoWeekLow": _safe_val(info.get("fiftyTwoWeekLow")),
@@ -181,7 +198,7 @@ def get_ratios(ticker: str) -> Optional[dict]:
             "earningsGrowth": _safe_val(info.get("earningsGrowth")),
             "earningsQuarterlyGrowth": _safe_val(info.get("earningsQuarterlyGrowth")),
             # Temettü
-            "dividendYield": _safe_val(info.get("dividendYield")),
+            "dividendYield": _normalize_div_yield(info),
             "payoutRatio": _safe_val(info.get("payoutRatio")),
             "dividendRate": _safe_val(info.get("dividendRate")),
             # Diğer

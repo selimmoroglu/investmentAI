@@ -14,58 +14,68 @@ interface SeriesPoint {
   value: number;
 }
 
-function findRow(stmt: FinancialStatement | null, keywords: string[]): (number | null)[] {
+type Freq = "annual" | "quarterly";
+
+// Birden fazla olası label denemesi yapar — yfinance versiyon/şirkete göre değişebiliyor
+function findValues(stmt: FinancialStatement | null, candidates: string[]): (number | null)[] {
   if (!stmt) return [];
-  const row = stmt.rows.find((r) =>
-    keywords.some((k) => r.label.toLowerCase() === k.toLowerCase() || r.label.toLowerCase().includes(k.toLowerCase()))
-  );
-  return row?.values ?? [];
+  for (const cand of candidates) {
+    const lc = cand.toLowerCase();
+    const exact = stmt.rows.find((r) => r.label.toLowerCase() === lc);
+    if (exact) return exact.values;
+  }
+  for (const cand of candidates) {
+    const lc = cand.toLowerCase();
+    const partial = stmt.rows.find((r) => r.label.toLowerCase().includes(lc));
+    if (partial) return partial.values;
+  }
+  return [];
 }
 
-function buildRatioSeries(
+function buildSeries(
   numerator: (number | null)[],
   denominator: (number | null)[],
   cols: string[],
   multiplier = 100
 ): SeriesPoint[] {
-  // Backend returns most-recent-first; reverse to chronological
   const points: SeriesPoint[] = [];
-  for (let i = 0; i < cols.length; i++) {
+  const n = Math.min(cols.length, numerator.length, denominator.length);
+  for (let i = 0; i < n; i++) {
     const num = numerator[i];
     const den = denominator[i];
     if (num != null && den != null && den !== 0) {
       points.push({ label: cols[i], value: (num / den) * multiplier });
     }
   }
-  return points.reverse();
+  return points.reverse(); // backend most-recent-first → kronolojik
 }
 
-function ChartCard({ title, data, color, unit = "%" }: {
+function ChartCard({ title, data, color, unit = "%", subtitle }: {
   title: string;
   data: SeriesPoint[];
   color?: string;
   unit?: string;
+  subtitle?: string;
 }) {
-  if (data.length < 2) {
-    return (
-      <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl p-4">
-        <p style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium mb-2">{title}</p>
-        <div style={{ color: "var(--text-muted)" }} className="text-[12px] py-12 text-center">
-          Yeterli veri yok
-        </div>
-      </div>
-    );
-  }
   return (
     <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl p-4">
-      <p style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium mb-3">{title}</p>
-      <LineChart
-        data={data}
-        color={color || "var(--chart-gold)"}
-        height={170}
-        unit={unit}
-        formatY={(v) => v.toFixed(1) + unit}
-      />
+      <div className="flex items-baseline justify-between mb-2">
+        <p style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium">{title}</p>
+        {subtitle && <p style={{ color: "var(--text-muted)" }} className="text-[10px]">{subtitle}</p>}
+      </div>
+      {data.length < 2 ? (
+        <div style={{ color: "var(--text-muted)", height: 200 }} className="text-[12px] flex items-center justify-center">
+          Yeterli veri yok
+        </div>
+      ) : (
+        <LineChart
+          data={data}
+          color={color || "var(--chart-gold)"}
+          height={200}
+          unit={unit}
+          formatY={(v) => v.toFixed(1) + unit}
+        />
+      )}
     </div>
   );
 }
@@ -82,7 +92,10 @@ function SnapshotRow({ label, value }: { label: string; value: string }) {
 export function RatiosTab({ ticker }: RatiosTabProps) {
   const [ratios, setRatios] = useState<Ratios | null>(null);
   const [incomeQ, setIncomeQ] = useState<FinancialStatement | null>(null);
+  const [incomeA, setIncomeA] = useState<FinancialStatement | null>(null);
   const [balanceQ, setBalanceQ] = useState<FinancialStatement | null>(null);
+  const [balanceA, setBalanceA] = useState<FinancialStatement | null>(null);
+  const [freq, setFreq] = useState<Freq>("annual");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -90,66 +103,100 @@ export function RatiosTab({ ticker }: RatiosTabProps) {
     Promise.all([
       api.ratios(ticker).catch(() => null),
       api.financials(ticker, "income", "quarterly").catch(() => null),
+      api.financials(ticker, "income", "annual").catch(() => null),
       api.financials(ticker, "balance", "quarterly").catch(() => null),
-    ]).then(([r, inc, bal]) => {
+      api.financials(ticker, "balance", "annual").catch(() => null),
+    ]).then(([r, incQ, incA, balQ, balA]) => {
       setRatios(r);
-      setIncomeQ(inc);
-      setBalanceQ(bal);
+      setIncomeQ(incQ);
+      setIncomeA(incA);
+      setBalanceQ(balQ);
+      setBalanceA(balA);
     }).finally(() => setLoading(false));
   }, [ticker]);
 
   if (loading) {
     return (
-      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}
-            className="rounded-xl h-[230px] animate-pulse" />
-        ))}
+      <div className="p-6 space-y-6">
+        <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl h-[200px] animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}
+              className="rounded-xl h-[260px] animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  // Trends — quarterly
-  const incCols = incomeQ?.columns ?? [];
-  const balCols = balanceQ?.columns ?? [];
+  // Aktif veri seti (annual veya quarterly)
+  const income = freq === "annual" ? incomeA : incomeQ;
+  const balance = freq === "annual" ? balanceA : balanceQ;
 
-  const revenue = findRow(incomeQ, ["Total Revenue", "Revenue"]);
-  const grossProfit = findRow(incomeQ, ["Gross Profit"]);
-  const operatingIncome = findRow(incomeQ, ["Operating Income", "Ebit"]);
-  const netIncome = findRow(incomeQ, ["Net Income"]);
-  const ebitda = findRow(incomeQ, ["EBITDA"]);
+  const incCols = income?.columns ?? [];
+  const balCols = balance?.columns ?? [];
 
-  const totalAssets = findRow(balanceQ, ["Total Assets"]);
-  const totalLiab = findRow(balanceQ, ["Total Liabilities Net Minority Interest", "Total Liabilities"]);
-  const totalEquity = findRow(balanceQ, ["Stockholders Equity", "Common Stock Equity", "Total Equity"]);
-  const totalDebt = findRow(balanceQ, ["Total Debt"]);
-  const currentAssets = findRow(balanceQ, ["Current Assets", "Total Current Assets"]);
-  const currentLiab = findRow(balanceQ, ["Current Liabilities", "Total Current Liabilities"]);
+  const revenue = findValues(income, ["Total Revenue", "Operating Revenue", "Revenue"]);
+  const grossProfit = findValues(income, ["Gross Profit"]);
+  const operatingIncome = findValues(income, ["Operating Income", "Total Operating Income As Reported", "Ebit"]);
+  const netIncome = findValues(income, ["Net Income Common Stockholders", "Net Income From Continuing Operation Net Minority Interest", "Net Income"]);
+  const ebitda = findValues(income, ["Normalized EBITDA", "EBITDA"]);
 
-  // Margin trends (income only)
-  const grossMarginTrend = buildRatioSeries(grossProfit, revenue, incCols);
-  const opMarginTrend = buildRatioSeries(operatingIncome, revenue, incCols);
-  const netMarginTrend = buildRatioSeries(netIncome, revenue, incCols);
-  const ebitdaMarginTrend = buildRatioSeries(ebitda.length ? ebitda : operatingIncome, revenue, incCols);
+  const totalAssets = findValues(balance, ["Total Assets"]);
+  const totalLiab = findValues(balance, ["Total Liabilities Net Minority Interest", "Total Liabilities"]);
+  const totalEquity = findValues(balance, ["Stockholders Equity", "Common Stock Equity", "Total Equity Gross Minority Interest"]);
+  const totalDebt = findValues(balance, ["Total Debt"]);
+  const longTermDebt = findValues(balance, ["Long Term Debt", "Long Term Debt And Capital Lease Obligation"]);
+  const currentDebt = findValues(balance, ["Current Debt", "Current Debt And Capital Lease Obligation"]);
+  const currentAssets = findValues(balance, ["Current Assets", "Total Current Assets"]);
+  const currentLiab = findValues(balance, ["Current Liabilities", "Total Current Liabilities"]);
+  const inventory = findValues(balance, ["Inventory"]);
 
-  // Return ratios (need cross-statement; assume same column ordering since both quarterly)
-  // Use min length for safety
-  const minLen = Math.min(incCols.length, balCols.length);
-  const roeTrend = buildRatioSeries(
-    netIncome.slice(0, minLen),
-    totalEquity.slice(0, minLen),
-    balCols.slice(0, minLen)
-  );
-  const roaTrend = buildRatioSeries(
-    netIncome.slice(0, minLen),
-    totalAssets.slice(0, minLen),
-    balCols.slice(0, minLen)
-  );
+  // Borç toplamı: Total Debt yoksa LT + ST debt
+  const debtSeries = totalDebt.length
+    ? totalDebt
+    : (longTermDebt.length || currentDebt.length)
+      ? incCols.map((_, i) => (longTermDebt[i] ?? 0) + (currentDebt[i] ?? 0))
+      : [];
 
-  // Leverage / liquidity (balance only)
-  const debtToAssetsTrend = buildRatioSeries(totalDebt.length ? totalDebt : totalLiab, totalAssets, balCols);
-  const debtToEquityTrend = buildRatioSeries(totalDebt.length ? totalDebt : totalLiab, totalEquity, balCols);
-  const currentRatioTrend = buildRatioSeries(currentAssets, currentLiab, balCols, 1); // ratio not %
+  // Quick assets = Current Assets - Inventory
+  const quickAssets = currentAssets.length && inventory.length
+    ? currentAssets.map((v, i) => (v != null ? v - (inventory[i] ?? 0) : null))
+    : currentAssets;
+
+  // Margins (income only)
+  const grossMargin = buildSeries(grossProfit, revenue, incCols);
+  const opMargin = buildSeries(operatingIncome, revenue, incCols);
+  const netMargin = buildSeries(netIncome, revenue, incCols);
+  const ebitdaMargin = buildSeries(ebitda.length ? ebitda : operatingIncome, revenue, incCols);
+
+  // ROE/ROA — income & balance kolonları aynı uzunluk değilse min'a göre kes
+  const roe = buildSeries(netIncome, totalEquity, balCols);
+  const roa = buildSeries(netIncome, totalAssets, balCols);
+
+  // Leverage / liquidity (balance)
+  const debtToAssets = buildSeries(debtSeries, totalAssets, balCols);
+  const debtToEquity = buildSeries(debtSeries, totalEquity, balCols);
+  const liabToAssets = buildSeries(totalLiab, totalAssets, balCols);
+  const currentRatio = buildSeries(currentAssets, currentLiab, balCols, 1);
+  const quickRatio = buildSeries(quickAssets, currentLiab, balCols, 1);
+  const equityRatio = buildSeries(totalEquity, totalAssets, balCols);
+
+  const charts = [
+    { title: "Brüt Kar Marjı", data: grossMargin, color: "var(--chart-gold)" },
+    { title: "Esas Faaliyet Kar Marjı", data: opMargin, color: "var(--chart-gold)" },
+    { title: "FAVÖK Marjı", data: ebitdaMargin, color: "var(--chart-gold)" },
+    { title: "Net Kar Marjı", data: netMargin, color: "var(--chart-pink)" },
+    { title: "Aktif Karlılık (ROA)", data: roa, color: "var(--chart-gold)" },
+    { title: "Özkaynak Karlılığı (ROE)", data: roe, color: "var(--chart-gold)" },
+    { title: "Borçluluk Oranı (Borç/Aktif)", data: debtToAssets.length > 1 ? debtToAssets : liabToAssets, color: "var(--chart-blue)", subtitle: debtToAssets.length > 1 ? undefined : "Yükümlülük/Aktif" },
+    { title: "Borç/Özkaynak Oranı", data: debtToEquity, color: "var(--chart-blue)" },
+    { title: "Özkaynak/Aktif Oranı", data: equityRatio, color: "var(--chart-blue)" },
+    { title: "Cari Oran", data: currentRatio, color: "var(--chart-blue)", unit: "x" },
+    { title: "Asit-Test (Quick Ratio)", data: quickRatio, color: "var(--chart-blue)", unit: "x" },
+  ];
+
+  const trendsAvailable = charts.filter(c => c.data.length >= 2).length;
 
   return (
     <div className="p-6 space-y-6">
@@ -197,22 +244,53 @@ export function RatiosTab({ ticker }: RatiosTabProps) {
         </div>
       )}
 
-      {/* Quarterly trends */}
+      {/* Trends with freq toggle */}
       <div>
-        <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">
-          Çeyreklik Trendler
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ChartCard title="Aktif Karlılık (ROA)" data={roaTrend} color="var(--chart-gold)" />
-          <ChartCard title="Özkaynak Karlılığı (ROE)" data={roeTrend} color="var(--chart-gold)" />
-          <ChartCard title="Brüt Kar Marjı" data={grossMarginTrend} color="var(--chart-gold)" />
-          <ChartCard title="Esas Faaliyet Kar Marjı" data={opMarginTrend} color="var(--chart-gold)" />
-          <ChartCard title="FAVÖK Marjı" data={ebitdaMarginTrend} color="var(--chart-gold)" />
-          <ChartCard title="Net Kar Marjı" data={netMarginTrend} color="var(--chart-pink)" />
-          <ChartCard title="Borçluluk Oranı (Borç/Aktif)" data={debtToAssetsTrend} color="var(--chart-blue)" />
-          <ChartCard title="Borç/Özkaynak Oranı" data={debtToEquityTrend} color="var(--chart-blue)" />
-          <ChartCard title="Cari Oran" data={currentRatioTrend} color="var(--chart-blue)" unit="x" />
+        <div className="flex items-center justify-between mb-3">
+          <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider font-medium">
+            Tarihsel Oran Trendleri
+          </p>
+          <div style={{ background: "var(--bg-tertiary)", borderRadius: 8, padding: 2 }} className="flex gap-[2px]">
+            {(["annual", "quarterly"] as Freq[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFreq(f)}
+                style={{
+                  background: freq === f ? "var(--bg-secondary)" : "transparent",
+                  color: freq === f ? "var(--text-primary)" : "var(--text-muted)",
+                  border: freq === f ? "1px solid var(--border)" : "1px solid transparent",
+                }}
+                className="px-3 py-1 rounded-md text-[11px] font-medium cursor-pointer transition-all"
+              >
+                {f === "annual" ? "Yıllık" : "Çeyreklik"}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {trendsAvailable === 0 ? (
+          <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl p-8 text-center">
+            <p style={{ color: "var(--text-muted)" }} className="text-[13px]">
+              Bu hisse için {freq === "annual" ? "yıllık" : "çeyreklik"} finansal veri yetersiz.
+              {freq === "annual" ? " Çeyreklik moda geçmeyi deneyin." : " Yıllık moda geçmeyi deneyin."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {charts.map((c) =>
+              c.data.length >= 2 && (
+                <ChartCard
+                  key={c.title}
+                  title={c.title}
+                  data={c.data}
+                  color={c.color}
+                  unit={c.unit}
+                  subtitle={c.subtitle}
+                />
+              )
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
