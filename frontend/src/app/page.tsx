@@ -4,10 +4,11 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "@/components/layout/ThemeProvider";
-import { api, type SectorItem, type StockRow, type Market } from "@/lib/api";
-import { formatChange, formatMarketCap, changeClass } from "@/lib/formatters";
+import { api, type SectorItem, type StockRow, type Market, type SectorStats } from "@/lib/api";
+import { formatChange, formatMarketCap, formatRatio, formatPercent, changeClass } from "@/lib/formatters";
 import { WatchlistPanel } from "@/components/watchlist/WatchlistPanel";
 import { IndicesBar } from "@/components/layout/IndicesBar";
+import { trSector } from "@/lib/sectorTr";
 
 export default function Home() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function Home() {
   const [market, setMarket] = useState<Market>("BIST");
   const [sectors, setSectors] = useState<SectorItem[]>([]);
   const [stocks, setStocks] = useState<StockRow[]>([]);
+  const [stats, setStats] = useState<SectorStats | null>(null);
   const [selectedSector, setSelectedSector] = useState<SectorItem | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -25,20 +27,26 @@ export default function Home() {
     setLoading(true);
     setSelectedSector(null);
     setStocks([]);
+    setStats(null);
     api.sectors(market)
       .then(setSectors)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [market]);
 
-  // Load stocks for selected sector
+  // Load stocks + stats for selected sector
   useEffect(() => {
-    if (!selectedSector) { setStocks([]); return; }
+    if (!selectedSector) { setStocks([]); setStats(null); return; }
     setStocksLoading(true);
+    setStats(null);
     api.sectorStocks(selectedSector.sector, market)
       .then((d) => setStocks(d.stocks))
       .catch(console.error)
       .finally(() => setStocksLoading(false));
+
+    api.sectorStats(selectedSector.sector, market)
+      .then(setStats)
+      .catch(console.error);
   }, [selectedSector, market]);
 
   const filteredSectors = useMemo(() => {
@@ -46,6 +54,7 @@ export default function Home() {
     const q = search.toLowerCase();
     return sectors.filter(
       (s) =>
+        trSector(s.sector).toLowerCase().includes(q) ||
         s.sector.toLowerCase().includes(q) ||
         s.tickers.some((t) => t.toLowerCase().includes(q))
     );
@@ -154,7 +163,7 @@ export default function Home() {
                     }}
                     className="w-full flex items-center justify-between px-4 py-2.5 text-[13px] font-medium cursor-pointer hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] transition-all text-left"
                   >
-                    <span className="truncate">{item.sector}</span>
+                    <span className="truncate">{trSector(item.sector)}</span>
                     <span style={{ color: "var(--text-muted)" }} className="text-[11px] tabular-nums shrink-0 ml-2">{item.count}</span>
                   </button>
                 );
@@ -181,18 +190,25 @@ export default function Home() {
           ) : (
             <>
               {/* Sector header */}
-              <div style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)" }} className="px-5 py-3 flex items-center justify-between">
-                <div>
-                  <p style={{ color: "var(--text-primary)" }} className="text-[15px] font-semibold">{selectedSector.sector}</p>
-                  <p style={{ color: "var(--text-muted)" }} className="text-[12px]">{selectedSector.count} hisse senedi</p>
-                </div>
-                <Link
-                  href={`/sector/${market}/${encodeURIComponent(selectedSector.sector)}`}
-                  style={{ border: "1px solid var(--border)", color: "var(--text-muted)" }}
-                  className="text-[12px] px-3 py-1.5 rounded-lg hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-all"
-                >
-                  Sektör Detayı →
-                </Link>
+              <div style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)" }} className="px-5 py-3">
+                <p style={{ color: "var(--text-primary)" }} className="text-[15px] font-semibold">{trSector(selectedSector.sector)}</p>
+                <p style={{ color: "var(--text-muted)" }} className="text-[12px]">{selectedSector.count} hisse senedi</p>
+              </div>
+
+              {/* Sector averages — inline */}
+              <div
+                style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-card)" }}
+                className="px-5 py-3 flex flex-wrap gap-x-6 gap-y-2"
+              >
+                <SectorStat label="Ort. Değişim" value={stats?.avgChangePercent != null ? `${stats.avgChangePercent >= 0 ? "+" : ""}${stats.avgChangePercent.toFixed(2)}%` : "—"} colorize={stats?.avgChangePercent ?? null} />
+                <SectorStat label="Ort. F/K" value={formatRatio(stats?.avgPE ?? null)} />
+                <SectorStat label="Medyan F/K" value={formatRatio(stats?.medianPE ?? null)} />
+                <SectorStat label="Ort. PD/DD" value={formatRatio(stats?.avgPB ?? null)} />
+                <SectorStat label="Ort. FD/FAVÖK" value={formatRatio(stats?.avgEVEBITDA ?? null)} />
+                <SectorStat label="Ort. F/S" value={formatRatio(stats?.avgPS ?? null)} />
+                <SectorStat label="Ort. ROE" value={formatPercent(stats?.avgROE ?? null)} />
+                <SectorStat label="Ort. Net Marj" value={formatPercent(stats?.avgNetMargin ?? null)} />
+                <SectorStat label="Ort. Temettü Verimi" value={formatPercent(stats?.avgDividendYield ?? null)} />
               </div>
 
               {/* Table header */}
@@ -252,6 +268,18 @@ export default function Home() {
         {/* Right watchlist panel */}
         <WatchlistPanel />
       </div>
+    </div>
+  );
+}
+
+function SectorStat({ label, value, colorize }: { label: string; value: string; colorize?: number | null }) {
+  const color = colorize == null
+    ? "var(--text-primary)"
+    : colorize >= 0 ? "var(--up)" : "var(--down)";
+  return (
+    <div className="flex flex-col gap-0.5 min-w-[90px]">
+      <span style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wide">{label}</span>
+      <span style={{ color }} className="text-[12px] font-semibold tabular-nums">{value}</span>
     </div>
   );
 }

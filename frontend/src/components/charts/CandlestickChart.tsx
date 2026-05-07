@@ -13,11 +13,16 @@ interface CandlestickChartProps {
     bbUpper?: { time: number; value: number }[];
     bbMid?: { time: number; value: number }[];
     bbLower?: { time: number; value: number }[];
+    channelMid?: { time: number; value: number }[];
+    channelUpper?: { time: number; value: number }[];
+    channelLower?: { time: number; value: number }[];
   };
+  /** Yatay fiyat çizgileri — destek (yeşil) ve direnç (kırmızı) seviyeleri */
+  priceLines?: { price: number; color: string; title: string }[];
   height?: number;
 }
 
-export function CandlestickChart({ data, overlays, height = 420 }: CandlestickChartProps) {
+export function CandlestickChart({ data, overlays, priceLines, height = 420 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
@@ -83,6 +88,32 @@ export function CandlestickChart({ data, overlays, height = 420 }: CandlestickCh
         const bbL = chart.addSeries(LineSeries, { color: "#6366f1", lineWidth: 1, lineStyle: 2, title: "BB-" });
         bbL.setData(overlays.bbLower.map((d) => ({ time: d.time as any, value: d.value })));
       }
+      if (overlays?.channelMid?.length) {
+        const cm = chart.addSeries(LineSeries, { color: "#a855f7", lineWidth: 1, title: "Trend Ekseni" });
+        cm.setData(overlays.channelMid.map((d) => ({ time: d.time as any, value: d.value })));
+      }
+      if (overlays?.channelUpper?.length) {
+        const cu = chart.addSeries(LineSeries, { color: "#a855f7", lineWidth: 1, lineStyle: 1, title: "Kanal Üst" });
+        cu.setData(overlays.channelUpper.map((d) => ({ time: d.time as any, value: d.value })));
+      }
+      if (overlays?.channelLower?.length) {
+        const cl = chart.addSeries(LineSeries, { color: "#a855f7", lineWidth: 1, lineStyle: 1, title: "Kanal Alt" });
+        cl.setData(overlays.channelLower.map((d) => ({ time: d.time as any, value: d.value })));
+      }
+
+      // Destek/direnç yatay çizgileri
+      if (priceLines && priceLines.length) {
+        priceLines.forEach((pl) => {
+          candleSeries.createPriceLine({
+            price: pl.price,
+            color: pl.color,
+            lineWidth: 1,
+            lineStyle: 2,
+            axisLabelVisible: true,
+            title: pl.title,
+          });
+        });
+      }
 
       chart.timeScale().fitContent();
 
@@ -104,7 +135,7 @@ export function CandlestickChart({ data, overlays, height = 420 }: CandlestickCh
         chart = null;
       }
     };
-  }, [data, overlays, theme, height]);
+  }, [data, overlays, priceLines, theme, height]);
 
   return <div ref={containerRef} style={{ width: "100%", height }} />;
 }

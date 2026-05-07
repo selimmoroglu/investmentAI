@@ -14,7 +14,51 @@ interface SeriesPoint {
   value: number;
 }
 
-type Freq = "annual" | "quarterly";
+type Mode = "all" | "annual" | "quarterly";
+
+// Merge annual + quarterly: tüm annual + en son annual'dan sonraki quarter'lar
+function mergeStatements(
+  annual: FinancialStatement | null,
+  quarterly: FinancialStatement | null,
+): FinancialStatement | null {
+  if (!annual && !quarterly) return null;
+  if (!annual) return quarterly;
+  if (!quarterly) return annual;
+
+  const annCols = annual.columns;
+  const qCols = quarterly.columns;
+  if (annCols.length === 0) return quarterly;
+  if (qCols.length === 0) return annual;
+
+  const latestAnnual = annCols[0]; // most-recent-first
+  // Quarter'lardan latest annual'dan sonraki tarihleri al
+  const extraQuarterIdx: number[] = [];
+  for (let i = 0; i < qCols.length; i++) {
+    if (qCols[i] > latestAnnual) extraQuarterIdx.push(i);
+  }
+  if (extraQuarterIdx.length === 0) return annual;
+
+  // En yeni quarter'ları başa koy → sonra annual'lar (most-recent-first sıralı kalır)
+  const newCols = [...extraQuarterIdx.map((i) => qCols[i]), ...annCols];
+
+  // Row'ları birleştir: aynı label için extra quarter values + annual values
+  const labelMap = new Map<string, { qVals: (number | null)[]; aVals: (number | null)[] }>();
+  annual.rows.forEach((r) => {
+    labelMap.set(r.label, { qVals: new Array(extraQuarterIdx.length).fill(null), aVals: r.values });
+  });
+  quarterly.rows.forEach((r) => {
+    const entry = labelMap.get(r.label) ?? { qVals: new Array(extraQuarterIdx.length).fill(null), aVals: new Array(annCols.length).fill(null) };
+    entry.qVals = extraQuarterIdx.map((i) => r.values[i] ?? null);
+    labelMap.set(r.label, entry);
+  });
+
+  const newRows = Array.from(labelMap.entries()).map(([label, { qVals, aVals }]) => ({
+    label,
+    values: [...qVals, ...aVals],
+  }));
+
+  return { columns: newCols, rows: newRows };
+}
 
 // Birden fazla olası label denemesi yapar — yfinance versiyon/şirkete göre değişebiliyor
 function findValues(stmt: FinancialStatement | null, candidates: string[]): (number | null)[] {
@@ -95,7 +139,7 @@ export function RatiosTab({ ticker }: RatiosTabProps) {
   const [incomeA, setIncomeA] = useState<FinancialStatement | null>(null);
   const [balanceQ, setBalanceQ] = useState<FinancialStatement | null>(null);
   const [balanceA, setBalanceA] = useState<FinancialStatement | null>(null);
-  const [freq, setFreq] = useState<Freq>("annual");
+  const [mode, setMode] = useState<Mode>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -129,9 +173,13 @@ export function RatiosTab({ ticker }: RatiosTabProps) {
     );
   }
 
-  // Aktif veri seti (annual veya quarterly)
-  const income = freq === "annual" ? incomeA : incomeQ;
-  const balance = freq === "annual" ? balanceA : balanceQ;
+  // Aktif veri seti
+  const income = mode === "all" ? mergeStatements(incomeA, incomeQ)
+    : mode === "annual" ? incomeA
+    : incomeQ;
+  const balance = mode === "all" ? mergeStatements(balanceA, balanceQ)
+    : mode === "annual" ? balanceA
+    : balanceQ;
 
   const incCols = income?.columns ?? [];
   const balCols = balance?.columns ?? [];
@@ -244,25 +292,34 @@ export function RatiosTab({ ticker }: RatiosTabProps) {
         </div>
       )}
 
-      {/* Trends with freq toggle */}
+      {/* Trends with mode toggle */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider font-medium">
-            Tarihsel Oran Trendleri
-          </p>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider font-medium">
+              Tarihsel Oran Trendleri
+            </p>
+            <p style={{ color: "var(--text-muted)" }} className="text-[10px] mt-0.5">
+              Uzun vade modunda yıllık veriler son 1 yılın çeyreklik detayıyla birleştirilir.
+            </p>
+          </div>
           <div style={{ background: "var(--bg-tertiary)", borderRadius: 8, padding: 2 }} className="flex gap-[2px]">
-            {(["annual", "quarterly"] as Freq[]).map((f) => (
+            {([
+              { id: "all", label: "Tümü (Uzun Vade)" },
+              { id: "annual", label: "Yıllık" },
+              { id: "quarterly", label: "Çeyreklik" },
+            ] as { id: Mode; label: string }[]).map((m) => (
               <button
-                key={f}
-                onClick={() => setFreq(f)}
+                key={m.id}
+                onClick={() => setMode(m.id)}
                 style={{
-                  background: freq === f ? "var(--bg-secondary)" : "transparent",
-                  color: freq === f ? "var(--text-primary)" : "var(--text-muted)",
-                  border: freq === f ? "1px solid var(--border)" : "1px solid transparent",
+                  background: mode === m.id ? "var(--bg-secondary)" : "transparent",
+                  color: mode === m.id ? "var(--text-primary)" : "var(--text-muted)",
+                  border: mode === m.id ? "1px solid var(--border)" : "1px solid transparent",
                 }}
                 className="px-3 py-1 rounded-md text-[11px] font-medium cursor-pointer transition-all"
               >
-                {f === "annual" ? "Yıllık" : "Çeyreklik"}
+                {m.label}
               </button>
             ))}
           </div>
@@ -271,8 +328,7 @@ export function RatiosTab({ ticker }: RatiosTabProps) {
         {trendsAvailable === 0 ? (
           <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl p-8 text-center">
             <p style={{ color: "var(--text-muted)" }} className="text-[13px]">
-              Bu hisse için {freq === "annual" ? "yıllık" : "çeyreklik"} finansal veri yetersiz.
-              {freq === "annual" ? " Çeyreklik moda geçmeyi deneyin." : " Yıllık moda geçmeyi deneyin."}
+              Bu hisse için finansal veri yetersiz. Farklı bir görünüm modunu deneyin.
             </p>
           </div>
         ) : (

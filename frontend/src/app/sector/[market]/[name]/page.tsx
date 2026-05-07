@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import { api, type SectorStocks, type SectorStats, type Market } from "@/lib/api";
-import { formatPrice, formatMarketCap, formatRatio, formatChange, changeClass } from "@/lib/formatters";
+import { formatMarketCap, formatChange, changeClass } from "@/lib/formatters";
+import { trSector } from "@/lib/sectorTr";
 
 interface PageProps {
   params: Promise<{ market: string; name: string }>;
@@ -74,7 +75,7 @@ export default function SectorPage({ params }: PageProps) {
           <span style={{ color: "var(--border)" }}>/</span>
           <span style={{ color: "var(--text-muted)" }} className="text-[13px]">Sektörler</span>
           <span style={{ color: "var(--border)" }}>/</span>
-          <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium">{decodedName}</span>
+          <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium">{trSector(decodedName)}</span>
 
           <button
             onClick={toggle}
@@ -94,7 +95,7 @@ export default function SectorPage({ params }: PageProps) {
         {/* Title */}
         <div>
           <h1 style={{ color: "var(--text-primary)" }} className="text-[24px] font-semibold tracking-tight">
-            {decodedName} Sektörü
+            {trSector(decodedName)} Sektörü
           </h1>
           <p style={{ color: "var(--text-muted)" }} className="text-[13px] mt-1">
             {marketParam === "BIST" ? "Borsa İstanbul" : "ABD Borsası"}

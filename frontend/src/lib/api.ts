@@ -88,7 +88,18 @@ export interface FinancialStatement {
   rows: { label: string; values: (number | null)[] }[];
 }
 
+export interface TechSummary {
+  overall: "Pozitif" | "Negatif" | "Nötr" | null;
+  rsi: number | null;
+  rsiLabel: "Aşırı Alım" | "Aşırı Satım" | "Nötr" | null;
+  macdSignal: "Pozitif" | "Negatif" | null;
+  priceVsSMA50: number | null;
+  priceVsSMA200: number | null;
+  goldenCross: boolean;
+}
+
 export interface Technicals {
+  currentPrice: number;
   sma20: { time: number; value: number }[];
   sma50: { time: number; value: number }[];
   sma200: { time: number; value: number }[];
@@ -101,6 +112,14 @@ export interface Technicals {
   bbUpper: { time: number; value: number }[];
   bbMid: { time: number; value: number }[];
   bbLower: { time: number; value: number }[];
+  support: number[];
+  resistance: number[];
+  trend: "Yükseliş" | "Düşüş" | "Yatay";
+  trendSlopePct: number;
+  channelMid: { time: number; value: number }[];
+  channelUpper: { time: number; value: number }[];
+  channelLower: { time: number; value: number }[];
+  summary: TechSummary;
 }
 
 export interface SectorItem {
@@ -117,8 +136,16 @@ export interface SectorStocks {
 export interface SectorStats {
   sector: string;
   avgPE: number | null;
+  medianPE: number | null;
   avgPB: number | null;
   avgEVEBITDA: number | null;
+  avgPS: number | null;
+  avgROE: number | null;
+  avgNetMargin: number | null;
+  avgDividendYield: number | null;
+  avgChangePercent: number | null;
+  stockCount: number;
+  ratedCount: number;
 }
 
 export interface IndexQuote {
