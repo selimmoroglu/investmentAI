@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { api, type Quote, type FinancialStatement, type OHLCVBar } from "@/lib/api";
+import { api, type Quote, type FinancialStatement, type OHLCVBar, type RealReturn } from "@/lib/api";
 import { BarChart } from "@/components/charts/BarChart";
 import { LineChart } from "@/components/charts/LineChart";
 import { ValuationScore } from "./ValuationScore";
@@ -114,11 +114,13 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
   const [history, setHistory] = useState<OHLCVBar[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("6A");
   const [freq, setFreq] = useState<Freq>("quarterly");
+  const [realReturn, setRealReturn] = useState<RealReturn | null>(null);
   const [loadingInit, setLoadingInit] = useState(true);
   const [loadingChart, setLoadingChart] = useState(false);
 
   useEffect(() => {
     setLoadingInit(true);
+    setRealReturn(null);
     const { period, interval } = PERIOD_MAP[selectedPeriod];
     Promise.all([
       api.quote(ticker),
@@ -133,6 +135,12 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
       setBalanceA(balA);
       setHistory(hist);
     }).catch(console.error).finally(() => setLoadingInit(false));
+
+    // Reel getiri sadece BIST hisseleri için
+    if (ticker.toUpperCase().endsWith(".IS")) {
+      api.realReturn(ticker).then(setRealReturn).catch(() => setRealReturn(null));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker]);
 
   useEffect(() => {
@@ -250,6 +258,60 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
         <QuickStat label="Temettü Getirisi" value={formatPercent(quote.dividendYield)} />
         <QuickStat label="Beta" value={formatRatio(quote.beta)} />
       </div>
+
+      {/* Reel Getiri (TÜFE Düzeltilmiş) — sadece BIST */}
+      {realReturn && realReturn.periods.length > 0 && (
+        <div>
+          <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+            <div>
+              <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider font-medium">Reel Getiri (TÜFE Düzeltilmiş)</p>
+              <p style={{ color: "var(--text-muted)" }} className="text-[10px] mt-0.5">Satın alma gücü kazancı — Reel = ((1+Nominal) / (1+TÜFE)) − 1</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {realReturn.periods.map((p) => {
+              const isReal = p.real != null;
+              const realPositive = isReal && p.real! >= 0;
+              const realColor = !isReal ? "var(--text-muted)" : realPositive ? "var(--up)" : "var(--down)";
+              const nominalPositive = p.nominal >= 0;
+              return (
+                <div
+                  key={p.label}
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}
+                  className="rounded-xl p-4"
+                >
+                  <div className="flex items-baseline justify-between mb-3">
+                    <span style={{ color: "var(--text-secondary)" }} className="text-[12px] font-semibold">{p.label}</span>
+                    <span style={{ color: "var(--text-muted)" }} className="text-[10px] tabular-nums">{p.startDate} → {p.endDate}</span>
+                  </div>
+                  <p style={{ color: realColor }} className="text-[28px] font-bold tabular-nums leading-tight">
+                    {!isReal ? "—" : `${p.real! >= 0 ? "+" : ""}${p.real!.toFixed(2)}%`}
+                  </p>
+                  <p style={{ color: "var(--text-muted)" }} className="text-[10px] mt-1">Reel getiri</p>
+
+                  <div className="grid grid-cols-2 gap-3 mt-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                    <div>
+                      <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wide">Nominal</p>
+                      <p
+                        style={{ color: nominalPositive ? "var(--up)" : "var(--down)" }}
+                        className="text-[13px] font-semibold tabular-nums"
+                      >
+                        {p.nominal >= 0 ? "+" : ""}{p.nominal.toFixed(2)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wide">TÜFE</p>
+                      <p style={{ color: "var(--text-secondary)" }} className="text-[13px] font-semibold tabular-nums">
+                        {p.inflation == null ? "—" : `+${p.inflation.toFixed(2)}%`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Özet Finansallar — two column table */}
       {hasFinSummary && (

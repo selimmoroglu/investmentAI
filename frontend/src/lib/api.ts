@@ -174,6 +174,22 @@ export interface LegendMatches {
   matches: LegendMatch[];
 }
 
+export interface RealReturnPeriod {
+  label: string;
+  nominal: number;
+  inflation: number | null;
+  real: number | null;
+  startDate: string;
+  endDate: string;
+  startPrice: number;
+  endPrice: number;
+}
+
+export interface RealReturn {
+  ticker: string;
+  periods: RealReturnPeriod[];
+}
+
 export interface IndexQuote {
   ticker: string;
   label: string;
@@ -227,4 +243,5 @@ export const api = {
   indexAnalysis: (ticker: string) => get<IndexAnalysis>(`/api/indices/${encodeURIComponent(ticker)}/analysis`),
   legendMatches: (strategyId: string, market: Market, limit = 20) =>
     get<LegendMatches>(`/api/legends/${strategyId}/matches?market=${market}&limit=${limit}`),
+  realReturn: (ticker: string) => get<RealReturn>(`/api/inflation/tr/real-return/${encodeURIComponent(ticker)}`),
 };
