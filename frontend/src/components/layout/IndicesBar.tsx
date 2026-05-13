@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { api, type IndexQuote } from "@/lib/api";
-import { changeClass, formatChange } from "@/lib/formatters";
+import { formatChange } from "@/lib/formatters";
+import { Badge, Skeleton } from "@/components/ui";
 
 function formatIndexPrice(price: number | null, ticker: string): string {
   if (price == null) return "—";
@@ -32,9 +33,9 @@ export function IndicesBar() {
 
   if (loading && data.length === 0) {
     return (
-      <div style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }} className="flex gap-6 px-5 py-2 overflow-x-auto">
+      <div style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }} className="flex gap-5 px-5 py-2.5 overflow-x-auto">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} style={{ background: "var(--bg-secondary)" }} className="h-8 w-32 rounded animate-pulse shrink-0" />
+          <Skeleton key={i} width="120px" height="36px" />
         ))}
       </div>
     );
@@ -43,7 +44,7 @@ export function IndicesBar() {
   return (
     <div
       style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }}
-      className="flex gap-5 px-5 py-2 overflow-x-auto scrollbar-thin"
+      className="flex gap-5 px-5 py-2.5 overflow-x-auto scrollbar-thin"
     >
       {data.map((item) => {
         const isUp = (item.changePercent ?? 0) >= 0;
@@ -53,20 +54,17 @@ export function IndicesBar() {
             className="flex items-center gap-2 shrink-0 py-0.5"
             title={`${item.label} • ${item.ticker}`}
           >
-            <div className="flex flex-col">
-              <span style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wide font-medium">
+            <div className="flex flex-col gap-0.5">
+              <span style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-medium">
                 {item.label}
               </span>
               <div className="flex items-baseline gap-1.5">
-                <span style={{ color: "var(--text-primary)" }} className="text-[12px] font-semibold tabular-nums">
+                <span style={{ color: "var(--text-primary)" }} className="text-[12.5px] font-semibold tabular-nums">
                   {formatIndexPrice(item.price, item.ticker)}
                 </span>
-                <span
-                  style={{ background: item.changePercent != null ? (isUp ? "var(--up-bg)" : "var(--down-bg)") : "transparent" }}
-                  className={`text-[10px] font-medium tabular-nums px-1 rounded ${changeClass(item.changePercent)}`}
-                >
+                <Badge tone={item.changePercent == null ? "neutral" : isUp ? "up" : "down"} size="sm">
                   {formatChange(item.changePercent)}
-                </span>
+                </Badge>
               </div>
             </div>
           </div>

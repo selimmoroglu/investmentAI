@@ -208,6 +208,11 @@ body {
 
 .fade-in { animation: fade-in var(--transition-base) ease-out; }
 
+/* Sayfa main içeriği için subtle fade — global */
+main {
+  animation: fade-in 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Premium focus ring (Stripe/Linear tarzı) */
 .focus-ring:focus-visible,
 button:focus-visible,

@@ -142,21 +142,24 @@ export function LineChart({ data, color = "var(--chart-gold)", height = 200, for
             position: "absolute",
             left: `${(hover.cx / W) * 100}%`,
             top: 4,
-            transform: hover.cx > W / 2 ? "translate(calc(-100% - 8px), 0)" : "translate(8px, 0)",
-            background: "var(--bg-tertiary)",
-            border: "1px solid var(--border)",
-            borderRadius: 6,
-            padding: "5px 9px",
+            transform: hover.cx > W / 2 ? "translate(calc(-100% - 10px), 0)" : "translate(10px, 0)",
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+            borderRadius: "var(--radius-md)",
+            padding: "8px 12px",
             pointerEvents: "none",
             whiteSpace: "nowrap",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+            boxShadow: "var(--shadow-lg)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
             zIndex: 10,
+            animation: "fade-in 120ms cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >
-          <p style={{ color: "var(--text-muted)", fontSize: 10, lineHeight: 1.2 }} className="tabular-nums">
+          <p style={{ color: "var(--text-muted)", fontSize: 10, lineHeight: 1.2 }} className="tabular-nums uppercase tracking-wider font-medium">
             {data[hover.idx].label}
           </p>
-          <p style={{ color: "var(--text-primary)", fontSize: 12, fontWeight: 600, lineHeight: 1.3 }} className="tabular-nums">
+          <p style={{ color: "var(--text-primary)", fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginTop: 2 }} className="tabular-nums">
             {fmt(data[hover.idx].value)}
           </p>
         </div>

@@ -11,6 +11,7 @@ import { formatPrice, formatChange, changeClass } from "@/lib/formatters";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import { useWatchlist } from "@/lib/watchlist";
 import { ArrowLeft, Sun, Moon, Star } from "lucide-react";
+import { useToast } from "@/components/ui";
 
 interface PageProps {
   params: Promise<{ ticker: string }>;
@@ -73,6 +74,19 @@ export default function StockPage({ params }: PageProps) {
   const { theme, toggle } = useTheme();
   const { has: isInWatchlist, toggle: toggleWatch } = useWatchlist();
   const inWatchlist = isInWatchlist(ticker);
+  const { push: toast } = useToast();
+
+  const handleToggleWatch = () => {
+    const willAdd = !inWatchlist;
+    toggleWatch({ ticker, name: quote?.name || undefined });
+    toast({
+      tone: "success",
+      title: willAdd ? "Takibe alındı" : "Takipten çıkarıldı",
+      description: willAdd
+        ? `${ticker.replace(".IS", "")} artık Takip Listenizde.`
+        : `${ticker.replace(".IS", "")} listeden kaldırıldı.`,
+    });
+  };
 
   useEffect(() => {
     api.quote(ticker).then(setQuote).catch(console.error);
@@ -95,7 +109,7 @@ export default function StockPage({ params }: PageProps) {
         }}
         className="sticky top-0 z-50"
       >
-        <div className="h-14 px-6 flex items-center gap-4">
+        <div className="h-14 px-4 sm:px-6 flex items-center gap-3 sm:gap-4">
           <Link
             href="/"
             style={{ color: "var(--text-muted)" }}
@@ -142,7 +156,7 @@ export default function StockPage({ params }: PageProps) {
           )}
 
           <button
-            onClick={() => toggleWatch({ ticker, name: quote?.name || undefined })}
+            onClick={handleToggleWatch}
             title={inWatchlist ? "Takipten çıkar" : "Takibe ekle"}
             style={{
               background: inWatchlist ? "var(--up-bg)" : "var(--bg-secondary)",

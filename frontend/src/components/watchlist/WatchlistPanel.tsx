@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, type Quote } from "@/lib/api";
 import { useWatchlist } from "@/lib/watchlist";
 import { formatChange } from "@/lib/formatters";
-import { Badge, Skeleton, EmptyState, EmptyWatchlistIllustration } from "@/components/ui";
+import { Badge, Skeleton, EmptyState, EmptyWatchlistIllustration, useToast } from "@/components/ui";
 import { X } from "lucide-react";
 
 interface Row {
@@ -19,8 +19,14 @@ interface Row {
 export function WatchlistPanel() {
   const router = useRouter();
   const { items, remove } = useWatchlist();
+  const { push: toast } = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const handleRemove = (ticker: string) => {
+    remove(ticker);
+    toast({ tone: "info", title: "Takipten çıkarıldı", description: `${ticker.replace(".IS", "")} listenizden kaldırıldı.` });
+  };
 
   useEffect(() => {
     if (items.length === 0) {
@@ -127,7 +133,7 @@ export function WatchlistPanel() {
                   </div>
                 </button>
                 <button
-                  onClick={() => remove(r.ticker)}
+                  onClick={() => handleRemove(r.ticker)}
                   title="Listeden çıkar"
                   style={{ color: "var(--text-muted)" }}
                   className="opacity-0 group-hover:opacity-100 hover:text-[var(--down)] transition-all cursor-pointer shrink-0"

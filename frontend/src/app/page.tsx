@@ -165,7 +165,7 @@ export default function Home() {
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left sector sidebar */}
-        <aside style={{ background: "var(--bg-card)", borderRight: "1px solid var(--border)", width: 230, minWidth: 230 }} className="flex flex-col overflow-hidden">
+        <aside style={{ background: "var(--bg-card)", borderRight: "1px solid var(--border)", width: 230, minWidth: 230 }} className="hidden md:flex flex-col overflow-hidden">
           {/* Endeks Analizleri butonu */}
           <Link
             href="/indices-analysis"
