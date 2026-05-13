@@ -73,6 +73,23 @@ def get_quote(ticker: str) -> Optional[dict]:
             "industry": info.get("industry"),
             "exchange": info.get("exchange"),
             "summary": info.get("longBusinessSummary"),
+            # --- Analist konsensüsü ---
+            "targetMeanPrice": _safe_val(info.get("targetMeanPrice")),
+            "targetHighPrice": _safe_val(info.get("targetHighPrice")),
+            "targetLowPrice": _safe_val(info.get("targetLowPrice")),
+            "targetMedianPrice": _safe_val(info.get("targetMedianPrice")),
+            "numberOfAnalystOpinions": _safe_val(info.get("numberOfAnalystOpinions")),
+            "recommendationKey": info.get("recommendationKey"),
+            "recommendationMean": _safe_val(info.get("recommendationMean")),
+            # --- Nakit & değer metrikleri ---
+            "freeCashflow": _safe_val(info.get("freeCashflow")),
+            "operatingCashflow": _safe_val(info.get("operatingCashflow")),
+            "ebitda": _safe_val(info.get("ebitda")),
+            "totalRevenue": _safe_val(info.get("totalRevenue")),
+            "enterpriseValue": _safe_val(info.get("enterpriseValue")),
+            "sharesOutstanding": _safe_val(info.get("sharesOutstanding")),
+            "totalCash": _safe_val(info.get("totalCash")),
+            "totalDebt": _safe_val(info.get("totalDebt")),
         }
         cache.set(key, result, ttl=120)
         return result

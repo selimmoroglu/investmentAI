@@ -6,7 +6,7 @@ import { api, type Quote, type FinancialStatement, type OHLCVBar, type RealRetur
 import { BarChart } from "@/components/charts/BarChart";
 import { LineChart } from "@/components/charts/LineChart";
 import { ValuationScore } from "./ValuationScore";
-import { Card, Stat, Skeleton } from "@/components/ui";
+import { Card, Stat, Skeleton, Badge } from "@/components/ui";
 import { formatPrice, formatVolume, formatMarketCap, formatRatio, formatPercent } from "@/lib/formatters";
 
 const CandlestickChart = dynamic(
@@ -251,6 +251,120 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
         <Stat label="Temettü Getirisi" value={formatPercent(quote.dividendYield)} size="sm" />
         <Stat label="Beta" value={formatRatio(quote.beta)} size="sm" />
       </Card>
+
+      {/* Analist Konsensüsü + Nakit Üretme Gücü */}
+      {(quote.targetMeanPrice != null || quote.freeCashflow != null) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Analist Konsensüsü */}
+          {quote.targetMeanPrice != null && quote.currentPrice != null && (() => {
+            const tm = quote.targetMeanPrice!;
+            const cp = quote.currentPrice!;
+            const upside = ((tm - cp) / cp) * 100;
+            const upsideUp = upside >= 0;
+            const recKey = (quote.recommendationKey || "").toLowerCase();
+            const recTone: "up" | "down" | "warn" | "neutral" =
+              recKey === "strong_buy" || recKey === "buy" ? "up" :
+              recKey === "sell" || recKey === "strong_sell" ? "down" :
+              recKey === "hold" ? "warn" : "neutral";
+            const recLabel: Record<string, string> = {
+              strong_buy: "Güçlü Al",
+              buy: "Al",
+              hold: "Tut",
+              sell: "Sat",
+              strong_sell: "Güçlü Sat",
+              underperform: "Düşük Performans",
+              none: "—",
+            };
+            return (
+              <Card variant="elevated" padding="lg">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-semibold">Analist Konsensüsü</p>
+                    <p style={{ color: "var(--text-secondary)" }} className="text-[11px] mt-0.5">
+                      {quote.numberOfAnalystOpinions != null ? `${quote.numberOfAnalystOpinions} analist tahmini` : "Wall Street tahmini"}
+                    </p>
+                  </div>
+                  {quote.recommendationKey && (
+                    <Badge tone={recTone} size="md">
+                      {recLabel[recKey] || quote.recommendationKey}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <div>
+                    <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wide">Hedef Fiyat</p>
+                    <p style={{ color: "var(--text-primary)" }} className="text-[22px] font-bold tabular-nums leading-tight">
+                      {formatPrice(tm, quote.currency)}
+                    </p>
+                  </div>
+                  <Badge tone={upsideUp ? "up" : "down"} size="md">
+                    {upsideUp ? "+" : ""}{upside.toFixed(2)}% upside
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                  <Stat label="Tahmin Üst" value={formatPrice(quote.targetHighPrice, quote.currency)} size="sm" />
+                  <Stat label="Tahmin Alt" value={formatPrice(quote.targetLowPrice, quote.currency)} size="sm" />
+                </div>
+              </Card>
+            );
+          })()}
+
+          {/* Nakit Üretme Gücü */}
+          {quote.freeCashflow != null && (() => {
+            const fcf = quote.freeCashflow!;
+            const fcfMargin = quote.totalRevenue ? (fcf / quote.totalRevenue) * 100 : null;
+            const fcfYield = quote.marketCap ? (fcf / quote.marketCap) * 100 : null;
+            const fcfPositive = fcf > 0;
+            return (
+              <Card variant="elevated" padding="lg">
+                <div className="mb-3">
+                  <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-semibold">Nakit Üretme Gücü</p>
+                  <p style={{ color: "var(--text-secondary)" }} className="text-[11px] mt-0.5">
+                    Serbest Nakit Akışı — uzun vadeli kalite göstergesi
+                  </p>
+                </div>
+
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <div>
+                    <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wide">Yıllık FCF</p>
+                    <p
+                      style={{ color: fcfPositive ? "var(--text-primary)" : "var(--down)" }}
+                      className="text-[22px] font-bold tabular-nums leading-tight"
+                    >
+                      {formatMarketCap(fcf, quote.currency)}
+                    </p>
+                  </div>
+                  {fcfYield != null && (
+                    <Badge tone={fcfYield > 5 ? "up" : fcfYield > 2 ? "warn" : "neutral"} size="md">
+                      FCF Verimi {fcfYield.toFixed(2)}%
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                  <Stat
+                    label="FCF Marjı"
+                    value={fcfMargin != null ? `${fcfMargin.toFixed(2)}%` : "—"}
+                    tone={fcfMargin != null && fcfMargin >= 10 ? "up" : fcfMargin != null && fcfMargin < 0 ? "down" : "default"}
+                    size="sm"
+                  />
+                  <Stat
+                    label="Net Borç"
+                    value={
+                      quote.totalDebt != null && quote.totalCash != null
+                        ? formatMarketCap(quote.totalDebt - quote.totalCash, quote.currency)
+                        : "—"
+                    }
+                    size="sm"
+                  />
+                </div>
+              </Card>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Reel Getiri (TÜFE Düzeltilmiş) — sadece BIST */}
       {realReturn && realReturn.periods.length > 0 && (

@@ -44,6 +44,23 @@ export interface Quote {
   industry: string | null;
   exchange: string | null;
   summary: string | null;
+  // Analist konsensüsü
+  targetMeanPrice: number | null;
+  targetHighPrice: number | null;
+  targetLowPrice: number | null;
+  targetMedianPrice: number | null;
+  numberOfAnalystOpinions: number | null;
+  recommendationKey: string | null;
+  recommendationMean: number | null;
+  // Nakit & değer
+  freeCashflow: number | null;
+  operatingCashflow: number | null;
+  ebitda: number | null;
+  totalRevenue: number | null;
+  enterpriseValue: number | null;
+  sharesOutstanding: number | null;
+  totalCash: number | null;
+  totalDebt: number | null;
 }
 
 export interface Ratios {
