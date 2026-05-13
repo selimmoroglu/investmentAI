@@ -1,22 +1,70 @@
 @import "tailwindcss";
 
-/* Dark mode */
+/* =========================================================
+   InvestmentAI — Design System Tokens (Fintables Hibrit)
+   ========================================================= */
+
+/* Dark mode (default) */
 :root, [data-theme="dark"] {
-  --bg-primary: #0d0d0f;
-  --bg-secondary: #161618;
-  --bg-tertiary: #222226;
-  --bg-card: #161618;
-  --border: #2a2a2e;
-  --text-primary: #f0f0f0;
-  --text-secondary: #a0a0a8;
-  --text-muted: #60606a;
+  /* Surface */
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #131316;
+  --bg-tertiary: #1c1c20;
+  --bg-card: #131316;
+  --bg-elevated: #18181c;
+  --border: #26262b;
+  --border-strong: #34343a;
+
+  /* Text */
+  --text-primary: #f5f5f7;
+  --text-secondary: #a8a8b0;
+  --text-muted: #66666e;
+
+  /* Neutral grayscale */
+  --neutral-50: #f8f8fa;
+  --neutral-100: #e8e8ec;
+  --neutral-200: #d4d4d8;
+  --neutral-300: #a8a8b0;
+  --neutral-400: #66666e;
+  --neutral-500: #4a4a52;
+  --neutral-600: #34343a;
+  --neutral-700: #26262b;
+  --neutral-800: #18181c;
+  --neutral-900: #0a0a0c;
+
+  /* Up / Down */
   --up: #22c55e;
   --down: #ef4444;
   --up-bg: rgba(34, 197, 94, 0.1);
   --down-bg: rgba(239, 68, 68, 0.1);
+  --up-glow: rgba(34, 197, 94, 0.25);
+  --down-glow: rgba(239, 68, 68, 0.25);
+
+  /* Accent — indigo→violet brand */
+  --accent-primary: #6366f1;
+  --accent-secondary: #a855f7;
+  --accent-muted: rgba(99, 102, 241, 0.12);
+  --accent-glow: rgba(99, 102, 241, 0.35);
+  --brand-gradient: linear-gradient(135deg, #6366f1, #a855f7);
+
+  /* Chart accents */
   --chart-gold: #d4a843;
   --chart-blue: #60a5fa;
   --chart-pink: #f472b6;
+
+  /* Shadows — dark mode (more pronounced black) */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 20px 32px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.4);
+  --shadow-glow-accent: 0 0 24px var(--accent-glow);
+  --shadow-glow-up: 0 0 18px var(--up-glow);
+  --shadow-glow-down: 0 0 18px var(--down-glow);
+
+  /* Glass */
+  --glass-bg: rgba(19, 19, 22, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.06);
 }
 
 /* Light mode */
@@ -25,48 +73,159 @@
   --bg-secondary: #ffffff;
   --bg-tertiary: #ebebed;
   --bg-card: #ffffff;
-  --border: #e2e2e6;
-  --text-primary: #0d0d0f;
-  --text-secondary: #52525a;
-  --text-muted: #909098;
+  --bg-elevated: #ffffff;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+
+  --neutral-50: #fafafa;
+  --neutral-100: #f4f4f5;
+  --neutral-200: #e4e4e7;
+  --neutral-300: #d4d4d8;
+  --neutral-400: #a1a1aa;
+  --neutral-500: #71717a;
+  --neutral-600: #52525b;
+  --neutral-700: #3f3f46;
+  --neutral-800: #27272a;
+  --neutral-900: #09090b;
+
   --up: #16a34a;
   --down: #dc2626;
   --up-bg: rgba(22, 163, 74, 0.08);
   --down-bg: rgba(220, 38, 38, 0.08);
+  --up-glow: rgba(22, 163, 74, 0.2);
+  --down-glow: rgba(220, 38, 38, 0.2);
+
+  --accent-primary: #4f46e5;
+  --accent-secondary: #9333ea;
+  --accent-muted: rgba(79, 70, 229, 0.08);
+  --accent-glow: rgba(79, 70, 229, 0.25);
+  --brand-gradient: linear-gradient(135deg, #4f46e5, #9333ea);
+
   --chart-gold: #b8860b;
   --chart-blue: #2563eb;
   --chart-pink: #db2777;
+
+  /* Lighter shadows in light mode */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 32px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.06);
+  --shadow-glow-accent: 0 0 18px var(--accent-glow);
+  --shadow-glow-up: 0 0 14px var(--up-glow);
+  --shadow-glow-down: 0 0 14px var(--down-glow);
+
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.06);
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Radius scale */
+:root {
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Spacing scale (4px base) — Tailwind ile çatışmasın diye prefiks: --space-* */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 }
 
-html, [data-theme="dark"] {
-  color-scheme: dark;
-}
+/* =========================================================
+   Reset & base
+   ========================================================= */
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-[data-theme="light"] {
-  color-scheme: light;
-}
+html, [data-theme="dark"] { color-scheme: dark; }
+[data-theme="light"] { color-scheme: light; }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  font-family: var(--font-display, "Inter"), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   line-height: 1.5;
+  font-feature-settings: "cv11", "ss01", "cv02";
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.15s, color 0.15s;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--transition-base), color var(--transition-base);
 }
 
-::selection {
-  background: rgba(99, 102, 241, 0.25);
-}
+::selection { background: var(--accent-muted); color: var(--text-primary); }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-sm); }
+::-webkit-scrollbar-thumb:hover { background: var(--neutral-500); }
+
+/* =========================================================
+   Animations
+   ========================================================= */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 0%,
+    var(--bg-tertiary) 50%,
+    var(--bg-secondary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.fade-in { animation: fade-in var(--transition-base) ease-out; }
+
+/* Premium focus ring (Stripe/Linear tarzı) */
+.focus-ring:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-glow);
+  transition: outline-offset var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

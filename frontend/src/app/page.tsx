@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import { api, type SectorItem, type StockRow, type Market, type SectorStats } from "@/lib/api";
-import { formatChange, formatMarketCap, formatRatio, formatPercent, changeClass } from "@/lib/formatters";
+import { formatChange, formatMarketCap, formatRatio, formatPercent } from "@/lib/formatters";
 import { WatchlistPanel } from "@/components/watchlist/WatchlistPanel";
 import { IndicesBar } from "@/components/layout/IndicesBar";
+import { Badge, Skeleton } from "@/components/ui";
 import { trSector } from "@/lib/sectorTr";
 
 export default function Home() {
@@ -190,9 +191,11 @@ export default function Home() {
           </div>
           <div className="flex-1 overflow-y-auto py-1">
             {loading ? (
-              Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} style={{ background: "var(--bg-secondary)", margin: "3px 8px" }} className="h-9 rounded-lg animate-pulse" />
-              ))
+              <div className="px-2 space-y-1.5">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <Skeleton key={i} height="36px" />
+                ))}
+              </div>
             ) : (
               filteredSectors.map((item) => {
                 const isActive = selectedSector?.sector === item.sector;
@@ -268,10 +271,11 @@ export default function Home() {
               {/* Stock rows */}
               <div className="flex-1 overflow-y-auto">
                 {stocksLoading ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "var(--bg-card)" : "var(--bg-secondary)" }}
-                      className="h-[58px] animate-pulse" />
-                  ))
+                  <div className="p-3 space-y-2">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <Skeleton key={i} height="52px" />
+                    ))}
+                  </div>
                 ) : (
                   stocks.map((stock, i) => {
                     const isUp = (stock.changePercent ?? 0) >= 0;
@@ -290,12 +294,9 @@ export default function Home() {
                           {stock.currentPrice != null ? stock.currentPrice.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                         </p>
                         <div className="text-right">
-                          <span
-                            style={{ background: stock.changePercent != null ? (isUp ? "var(--up-bg)" : "var(--down-bg)") : "transparent" }}
-                            className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium tabular-nums ${changeClass(stock.changePercent ?? null)}`}
-                          >
+                          <Badge tone={stock.changePercent == null ? "neutral" : isUp ? "up" : "down"} size="sm">
                             {formatChange(stock.changePercent ?? null)}
-                          </span>
+                          </Badge>
                         </div>
                         <p style={{ color: "var(--text-secondary)" }} className="text-[12px] tabular-nums text-right">
                           {formatMarketCap(stock.marketCap ?? null, stock.currency ?? null)}

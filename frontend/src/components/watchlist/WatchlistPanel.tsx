@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, type Quote } from "@/lib/api";
 import { useWatchlist } from "@/lib/watchlist";
-import { formatChange, changeClass } from "@/lib/formatters";
+import { formatChange } from "@/lib/formatters";
+import { Badge, Skeleton } from "@/components/ui";
 
 interface Row {
   ticker: string;
@@ -63,16 +64,21 @@ export function WatchlistPanel() {
 
   return (
     <aside
-      style={{ background: "var(--bg-card)", borderLeft: "1px solid var(--border)", width: 280, minWidth: 280 }}
+      style={{
+        background: "var(--glass-bg)",
+        borderLeft: "1px solid var(--glass-border)",
+        width: 280,
+        minWidth: 280,
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+      }}
       className="hidden lg:flex flex-col overflow-hidden"
     >
-      <div style={{ borderBottom: "1px solid var(--border)" }} className="px-4 py-3 flex items-center justify-between">
-        <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-medium">
+      <div style={{ borderBottom: "1px solid var(--glass-border)" }} className="px-4 py-3 flex items-center justify-between">
+        <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-semibold">
           Takip Listem
         </p>
-        <span style={{ color: "var(--text-muted)" }} className="text-[11px] tabular-nums">
-          {items.length}
-        </span>
+        {items.length > 0 && <Badge tone="accent" size="sm">{items.length}</Badge>}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -85,9 +91,11 @@ export function WatchlistPanel() {
             <p className="text-[11px]">Hisse detay sayfasındaki yıldıza tıklayarak ekleyin</p>
           </div>
         ) : loading && rows.length === 0 ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} style={{ background: "var(--bg-secondary)", margin: "6px 8px" }} className="h-[52px] rounded-lg animate-pulse" />
-          ))
+          <div className="px-2 py-2 space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} height="52px" />
+            ))}
+          </div>
         ) : (
           rows.map((r) => {
             const isUp = (r.changePercent ?? 0) >= 0;
@@ -113,12 +121,9 @@ export function WatchlistPanel() {
                     <p style={{ color: "var(--text-muted)" }} className="text-[10px] truncate">
                       {r.name}
                     </p>
-                    <span
-                      style={{ background: r.changePercent != null ? (isUp ? "var(--up-bg)" : "var(--down-bg)") : "transparent" }}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium tabular-nums shrink-0 ${changeClass(r.changePercent)}`}
-                    >
+                    <Badge tone={r.changePercent == null ? "neutral" : isUp ? "up" : "down"} size="sm">
                       {formatChange(r.changePercent)}
-                    </span>
+                    </Badge>
                   </div>
                 </button>
                 <button

@@ -6,6 +6,7 @@ import { api, type Quote, type FinancialStatement, type OHLCVBar, type RealRetur
 import { BarChart } from "@/components/charts/BarChart";
 import { LineChart } from "@/components/charts/LineChart";
 import { ValuationScore } from "./ValuationScore";
+import { Card, Stat, Skeleton } from "@/components/ui";
 import { formatPrice, formatVolume, formatMarketCap, formatRatio, formatPercent } from "@/lib/formatters";
 
 const CandlestickChart = dynamic(
@@ -28,15 +29,6 @@ const PERIOD_MAP: Record<Period, { period: string; interval: string }> = {
   "1Y": { period: "1y", interval: "1d" },
   "5Y": { period: "5y", interval: "1wk" },
 };
-
-function QuickStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wide">{label}</span>
-      <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium tabular-nums">{value}</span>
-    </div>
-  );
-}
 
 function parseFinRow(stmt: FinancialStatement | null, keywords: string[]): (number | null)[] {
   if (!stmt) return [];
@@ -156,9 +148,10 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
   if (loadingInit) {
     return (
       <div className="p-6 space-y-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl h-40 animate-pulse" />
-        ))}
+        <Skeleton height="360px" />
+        <Skeleton height="80px" />
+        <Skeleton height="220px" />
+        <Skeleton height="220px" />
       </div>
     );
   }
@@ -246,18 +239,18 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
       </div>
 
       {/* Quick stats bar */}
-      <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl px-5 py-4 flex flex-wrap gap-6">
-        <QuickStat label="Önceki Kapanış" value={formatPrice(quote.previousClose, quote.currency)} />
-        <QuickStat label="52H Yüksek" value={formatPrice(quote.fiftyTwoWeekHigh, quote.currency)} />
-        <QuickStat label="52H Düşük" value={formatPrice(quote.fiftyTwoWeekLow, quote.currency)} />
-        <QuickStat label="Günlük Hacim" value={formatVolume(quote.volume)} />
-        <QuickStat label="Ort. Hacim (3A)" value={formatVolume(quote.avgVolume)} />
-        <QuickStat label="Piyasa Değeri" value={formatMarketCap(quote.marketCap, quote.currency)} />
-        <QuickStat label="F/K Oranı" value={formatRatio(quote.pe)} />
-        <QuickStat label="HBK (EPS)" value={formatRatio(quote.eps)} />
-        <QuickStat label="Temettü Getirisi" value={formatPercent(quote.dividendYield)} />
-        <QuickStat label="Beta" value={formatRatio(quote.beta)} />
-      </div>
+      <Card variant="elevated" padding="lg" className="flex flex-wrap gap-x-8 gap-y-4">
+        <Stat label="Önceki Kapanış" value={formatPrice(quote.previousClose, quote.currency)} size="sm" />
+        <Stat label="52H Yüksek" value={formatPrice(quote.fiftyTwoWeekHigh, quote.currency)} size="sm" />
+        <Stat label="52H Düşük" value={formatPrice(quote.fiftyTwoWeekLow, quote.currency)} size="sm" />
+        <Stat label="Günlük Hacim" value={formatVolume(quote.volume)} size="sm" />
+        <Stat label="Ort. Hacim (3A)" value={formatVolume(quote.avgVolume)} size="sm" />
+        <Stat label="Piyasa Değeri" value={formatMarketCap(quote.marketCap, quote.currency)} size="sm" />
+        <Stat label="F/K Oranı" value={formatRatio(quote.pe)} size="sm" />
+        <Stat label="HBK (EPS)" value={formatRatio(quote.eps)} size="sm" />
+        <Stat label="Temettü Getirisi" value={formatPercent(quote.dividendYield)} size="sm" />
+        <Stat label="Beta" value={formatRatio(quote.beta)} size="sm" />
+      </Card>
 
       {/* Reel Getiri (TÜFE Düzeltilmiş) — sadece BIST */}
       {realReturn && realReturn.periods.length > 0 && (
