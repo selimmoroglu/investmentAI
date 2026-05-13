@@ -10,6 +10,7 @@ import { RatiosTab } from "@/components/stock/RatiosTab";
 import { formatPrice, formatChange, changeClass } from "@/lib/formatters";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import { useWatchlist } from "@/lib/watchlist";
+import { ArrowLeft, Sun, Moon, Star } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ ticker: string }>;
@@ -86,7 +87,12 @@ export default function StockPage({ params }: PageProps) {
     >
       {/* Top bar */}
       <header
-        style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }}
+        style={{
+          background: "var(--glass-bg)",
+          borderBottom: "1px solid var(--glass-border)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
         className="sticky top-0 z-50"
       >
         <div className="h-14 px-6 flex items-center gap-4">
@@ -95,9 +101,7 @@ export default function StockPage({ params }: PageProps) {
             style={{ color: "var(--text-muted)" }}
             className="flex items-center gap-2 text-[13px] hover:text-[var(--text-primary)] transition-colors shrink-0"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <ArrowLeft size={14} strokeWidth={1.8} />
             <span className="hidden sm:inline">InvestmentAI</span>
           </Link>
 
@@ -147,22 +151,17 @@ export default function StockPage({ params }: PageProps) {
             }}
             className="h-8 px-2.5 flex items-center gap-1.5 rounded-lg cursor-pointer shrink-0 text-[12px] font-medium hover:text-[var(--text-primary)] transition-all"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill={inWatchlist ? "currentColor" : "none"}>
-              <path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.62L12 2L9.19 8.62L2 9.24L7.46 13.97L5.82 21L12 17.27Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-            </svg>
+            <Star size={13} strokeWidth={1.8} fill={inWatchlist ? "currentColor" : "none"} />
             <span className="hidden sm:inline">{inWatchlist ? "Takipte" : "Takibe Al"}</span>
           </button>
 
           <button
             onClick={toggle}
             style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-            className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer shrink-0 hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] transition-all"
+            aria-label="Tema değiştir"
           >
-            {theme === "dark" ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            )}
+            {theme === "dark" ? <Sun size={14} strokeWidth={1.8} /> : <Moon size={14} strokeWidth={1.8} />}
           </button>
         </div>
       </header>

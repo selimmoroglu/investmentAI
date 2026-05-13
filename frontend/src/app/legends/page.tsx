@@ -8,6 +8,8 @@ import { LEGENDS, type Legend } from "@/lib/legends";
 import { api, type LegendMatch, type Market } from "@/lib/api";
 import { formatChange, formatRatio, formatPercent, changeClass } from "@/lib/formatters";
 import { trSector } from "@/lib/sectorTr";
+import { ArrowLeft, Sun, Moon } from "lucide-react";
+import { EmptyState, NoMatchesIllustration, Skeleton } from "@/components/ui";
 
 export default function LegendsPage() {
   const router = useRouter();
@@ -45,15 +47,21 @@ export default function LegendsPage() {
   return (
     <div style={{ background: "var(--bg-primary)", color: "var(--text-primary)", minHeight: "100vh" }} className="flex flex-col">
       {/* Header */}
-      <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }} className="sticky top-0 z-50 h-14 flex items-center px-5 gap-4">
+      <header
+        style={{
+          background: "var(--glass-bg)",
+          borderBottom: "1px solid var(--glass-border)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+        className="sticky top-0 z-50 h-14 flex items-center px-5 gap-4"
+      >
         <Link href="/" style={{ color: "var(--text-muted)" }} className="flex items-center gap-2 text-[13px] hover:text-[var(--text-primary)] transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ArrowLeft size={14} strokeWidth={1.8} />
           InvestmentAI
         </Link>
         <span style={{ color: "var(--border)" }}>/</span>
-        <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium">Yatırım Üstadları</span>
+        <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-semibold">Yatırım Üstadları</span>
 
         <div className="ml-auto flex items-center gap-2">
           <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="flex rounded-lg p-[3px] gap-[2px]">
@@ -62,23 +70,21 @@ export default function LegendsPage() {
                 key={m}
                 onClick={() => setMarket(m)}
                 style={{
-                  background: market === m ? "var(--bg-tertiary)" : "transparent",
-                  color: market === m ? "var(--text-primary)" : "var(--text-muted)",
-                  border: market === m ? "1px solid var(--border)" : "1px solid transparent",
+                  background: market === m ? "var(--accent-muted)" : "transparent",
+                  color: market === m ? "var(--accent-primary)" : "var(--text-muted)",
+                  border: market === m ? "1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)" : "1px solid transparent",
                 }}
-                className="px-3 py-1 rounded-md text-[12px] font-medium transition-all cursor-pointer"
+                className="px-3 py-1 rounded-md text-[12px] font-semibold transition-all cursor-pointer"
               >
-                {m === "BIST" ? "🇹🇷 BIST" : "🇺🇸 ABD"}
+                {m}
               </button>
             ))}
           </div>
           <button onClick={toggle} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-            className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer">
-            {theme === "dark" ? (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-            ) : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            )}
+            className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] transition-all"
+            aria-label="Tema değiştir"
+          >
+            {theme === "dark" ? <Sun size={13} strokeWidth={1.8} /> : <Moon size={13} strokeWidth={1.8} />}
           </button>
         </div>
       </header>
@@ -361,19 +367,18 @@ export default function LegendsPage() {
             </div>
 
             {loading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "var(--bg-card)" : "var(--bg-secondary)" }}
-                  className="h-[52px] animate-pulse" />
-              ))
-            ) : matches.length === 0 ? (
-              <div className="py-12 text-center" style={{ color: "var(--text-muted)" }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="mx-auto mb-3 opacity-30">
-                  <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                <p className="text-[13px] mb-1" style={{ color: "var(--text-secondary)" }}>Bu stratejinin filtrelerine uyan hisse bulunamadı.</p>
-                <p className="text-[11px]">{market === "BIST" ? "ABD" : "BIST"} pazarına geçmeyi deneyin.</p>
+              <div className="p-3 space-y-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Skeleton key={i} height="52px" />
+                ))}
               </div>
+            ) : matches.length === 0 ? (
+              <EmptyState
+                illustration={<NoMatchesIllustration />}
+                title="Eşleşen hisse bulunamadı"
+                description={`Bu stratejinin filtrelerine uyan hisse yok. ${market === "BIST" ? "ABD" : "BIST"} pazarına geçmeyi deneyin.`}
+                size="md"
+              />
             ) : (
               matches.map((m, i) => {
                 const isUp = (m.changePercent ?? 0) >= 0;

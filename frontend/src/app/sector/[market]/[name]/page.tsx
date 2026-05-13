@@ -7,6 +7,7 @@ import { useTheme } from "@/components/layout/ThemeProvider";
 import { api, type SectorStocks, type SectorStats, type Market } from "@/lib/api";
 import { formatMarketCap, formatChange, changeClass } from "@/lib/formatters";
 import { trSector } from "@/lib/sectorTr";
+import { ArrowLeft, Sun, Moon } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ market: string; name: string }>;
@@ -58,7 +59,12 @@ export default function SectorPage({ params }: PageProps) {
     >
       {/* Header */}
       <header
-        style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }}
+        style={{
+          background: "var(--glass-bg)",
+          borderBottom: "1px solid var(--glass-border)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
         className="sticky top-0 z-50"
       >
         <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center gap-4">
@@ -67,26 +73,21 @@ export default function SectorPage({ params }: PageProps) {
             style={{ color: "var(--text-muted)" }}
             className="flex items-center gap-2 text-[13px] hover:text-[var(--text-primary)] transition-colors"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <ArrowLeft size={14} strokeWidth={1.8} />
             InvestmentAI
           </Link>
           <span style={{ color: "var(--border)" }}>/</span>
           <span style={{ color: "var(--text-muted)" }} className="text-[13px]">Sektörler</span>
           <span style={{ color: "var(--border)" }}>/</span>
-          <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium">{trSector(decodedName)}</span>
+          <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-semibold">{trSector(decodedName)}</span>
 
           <button
             onClick={toggle}
             style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-            className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer"
+            className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] transition-all"
+            aria-label="Tema değiştir"
           >
-            {theme === "dark" ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            )}
+            {theme === "dark" ? <Sun size={14} strokeWidth={1.8} /> : <Moon size={14} strokeWidth={1.8} />}
           </button>
         </div>
       </header>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import { api, type StockRow, type SectorItem, type Market } from "@/lib/api";
 import { formatChange, formatMarketCap, formatRatio, changeClass } from "@/lib/formatters";
+import { ArrowLeft, Sun, Moon, Search } from "lucide-react";
 
 type SortKey = "ticker" | "name" | "currentPrice" | "changePercent" | "marketCap" | "pe";
 type SortDir = "asc" | "desc";
@@ -137,32 +138,42 @@ export default function ScreenerPage() {
   return (
     <div style={{ background: "var(--bg-primary)", color: "var(--text-primary)", minHeight: "100vh" }} className="flex flex-col">
       {/* Header */}
-      <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }} className="sticky top-0 z-50 h-14 flex items-center px-5 gap-4">
+      <header
+        style={{
+          background: "var(--glass-bg)",
+          borderBottom: "1px solid var(--glass-border)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+        className="sticky top-0 z-50 h-14 flex items-center px-5 gap-4"
+      >
         <Link href="/" style={{ color: "var(--text-muted)" }} className="flex items-center gap-2 text-[13px] hover:text-[var(--text-primary)] transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <ArrowLeft size={14} strokeWidth={1.8} />
           InvestmentAI
         </Link>
         <span style={{ color: "var(--border)" }}>/</span>
-        <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium">Screener</span>
+        <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-semibold">Screener</span>
 
         <div className="ml-auto flex items-center gap-2">
           <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="flex rounded-lg p-[3px] gap-[2px]">
             {(["BIST", "US"] as Market[]).map((m) => (
               <button key={m} onClick={() => setMarket(m)}
-                style={{ background: market === m ? "var(--bg-tertiary)" : "transparent", color: market === m ? "var(--text-primary)" : "var(--text-muted)", border: market === m ? "1px solid var(--border)" : "1px solid transparent" }}
-                className="px-3 py-1 rounded-md text-[12px] font-medium transition-all cursor-pointer"
+                style={{
+                  background: market === m ? "var(--accent-muted)" : "transparent",
+                  color: market === m ? "var(--accent-primary)" : "var(--text-muted)",
+                  border: market === m ? "1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)" : "1px solid transparent",
+                }}
+                className="px-3 py-1 rounded-md text-[12px] font-semibold transition-all cursor-pointer"
               >
-                {m === "BIST" ? "🇹🇷 BIST" : "🇺🇸 ABD"}
+                {m}
               </button>
             ))}
           </div>
           <button onClick={toggle} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-            className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer">
-            {theme === "dark" ? (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-            ) : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            )}
+            className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] transition-all"
+            aria-label="Tema değiştir"
+          >
+            {theme === "dark" ? <Sun size={13} strokeWidth={1.8} /> : <Moon size={13} strokeWidth={1.8} />}
           </button>
         </div>
       </header>
@@ -179,10 +190,7 @@ export default function ScreenerPage() {
           <div className="flex flex-col gap-1 min-w-[180px]">
             <label style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wide">Ara</label>
             <div className="relative">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2">
-                <circle cx="11" cy="11" r="7" stroke="var(--text-muted)" strokeWidth="2"/>
-                <path d="M16.5 16.5L21 21" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
+              <Search size={13} color="var(--text-muted)" strokeWidth={1.8} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder="Sembol veya şirket..."
                 style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}

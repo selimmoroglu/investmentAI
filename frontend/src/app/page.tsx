@@ -8,8 +8,9 @@ import { api, type SectorItem, type StockRow, type Market, type SectorStats } fr
 import { formatChange, formatMarketCap, formatRatio, formatPercent } from "@/lib/formatters";
 import { WatchlistPanel } from "@/components/watchlist/WatchlistPanel";
 import { IndicesBar } from "@/components/layout/IndicesBar";
-import { Badge, Skeleton } from "@/components/ui";
+import { Badge, Skeleton, EmptyState, SelectIllustration } from "@/components/ui";
 import { trSector } from "@/lib/sectorTr";
+import { Search, SlidersHorizontal, Sparkles, Sun, Moon, BarChart3, ArrowRight, Inbox } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -64,29 +65,45 @@ export default function Home() {
   return (
     <div style={{ background: "var(--bg-primary)", color: "var(--text-primary)", minHeight: "100vh" }} className="flex flex-col">
       {/* Top bar */}
-      <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }} className="sticky top-0 z-50 h-14 flex items-center px-5 gap-4">
+      <header
+        style={{
+          background: "var(--glass-bg)",
+          borderBottom: "1px solid var(--glass-border)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+        className="sticky top-0 z-50 h-14 flex items-center px-5 gap-4"
+      >
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0">
-          <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-            <path d="M2 18L8 10L13 14L20 4" stroke="var(--up)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <circle cx="20" cy="4" r="2" fill="var(--up)"/>
-          </svg>
+          <div
+            style={{
+              background: "var(--brand-gradient)",
+              boxShadow: "var(--shadow-glow-accent)",
+              width: 26, height: 26,
+            }}
+            className="rounded-lg flex items-center justify-center"
+          >
+            <BarChart3 size={15} color="#fff" strokeWidth={2.2} />
+          </div>
           <span style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }} className="text-[15px] font-semibold">InvestmentAI</span>
         </div>
 
         {/* Search */}
         <div className="flex-1 max-w-sm relative">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-            <circle cx="11" cy="11" r="7" stroke="var(--text-muted)" strokeWidth="2"/>
-            <path d="M16.5 16.5L21 21" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
+          <Search
+            size={14}
+            color="var(--text-muted)"
+            strokeWidth={1.8}
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+          />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Sektör veya hisse ara..."
             style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
-            className="w-full pl-9 pr-4 py-[6px] rounded-lg text-[13px] outline-none focus:border-blue-500/50 placeholder:text-[var(--text-muted)] transition-all"
+            className="w-full pl-9 pr-4 py-[6px] rounded-lg text-[13px] outline-none placeholder:text-[var(--text-muted)] transition-all"
           />
         </div>
 
@@ -95,11 +112,9 @@ export default function Home() {
           <Link
             href="/legends"
             style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-all"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-all"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-            </svg>
+            <Sparkles size={13} strokeWidth={1.8} />
             Yatırım Üstadları
           </Link>
 
@@ -107,11 +122,9 @@ export default function Home() {
           <Link
             href="/screener"
             style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-all"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-all"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+            <SlidersHorizontal size={13} strokeWidth={1.8} />
             Screener
           </Link>
 
@@ -122,13 +135,13 @@ export default function Home() {
                 key={m}
                 onClick={() => setMarket(m)}
                 style={{
-                  background: market === m ? "var(--bg-tertiary)" : "transparent",
-                  color: market === m ? "var(--text-primary)" : "var(--text-muted)",
-                  border: market === m ? "1px solid var(--border)" : "1px solid transparent",
+                  background: market === m ? "var(--accent-muted)" : "transparent",
+                  color: market === m ? "var(--accent-primary)" : "var(--text-muted)",
+                  border: market === m ? "1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)" : "1px solid transparent",
                 }}
-                className="px-3 py-1 rounded-md text-[12px] font-medium transition-all cursor-pointer"
+                className="px-3 py-1 rounded-md text-[12px] font-semibold transition-all cursor-pointer"
               >
-                {m === "BIST" ? "🇹🇷 BIST" : "🇺🇸 ABD"}
+                {m === "BIST" ? "BIST" : "ABD"}
               </button>
             ))}
           </div>
@@ -137,12 +150,13 @@ export default function Home() {
           <button
             onClick={toggle}
             style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-            className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-all"
+            aria-label="Tema değiştir"
           >
             {theme === "dark" ? (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              <Sun size={14} strokeWidth={1.8} />
             ) : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <Moon size={14} strokeWidth={1.8} />
             )}
           </button>
         </div>
@@ -164,23 +178,19 @@ export default function Home() {
             <div className="flex items-center gap-2.5">
               <div
                 style={{
-                  background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                  background: "var(--brand-gradient)",
                   width: 32, height: 32,
-                  boxShadow: "0 4px 10px rgba(99, 102, 241, 0.3)",
+                  boxShadow: "var(--shadow-glow-accent)",
                 }}
                 className="rounded-lg flex items-center justify-center shrink-0"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 3v18h18M7 14l4-4 4 3 5-7" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <BarChart3 size={16} color="#fff" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
                 <p style={{ color: "var(--text-primary)" }} className="text-[12px] font-semibold leading-tight">Endeks Analizleri</p>
                 <p style={{ color: "var(--text-muted)" }} className="text-[10px] mt-0.5">BIST, NASDAQ, USD, Altın, BTC...</p>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: "var(--text-muted)" }} className="group-hover:translate-x-0.5 transition-transform">
-                <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <ArrowRight size={14} color="var(--text-muted)" strokeWidth={1.8} className="group-hover:translate-x-0.5 transition-transform" />
             </div>
           </Link>
 
@@ -225,14 +235,13 @@ export default function Home() {
           <IndicesBar />
 
           {!selectedSector ? (
-            // Welcome state
-            <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "var(--text-muted)" }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="mb-4 opacity-30">
-                <path d="M3 3v18h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M7 16l4-5 4 3 4-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <p className="text-[15px] font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Sektör Seçin</p>
-              <p className="text-[13px]">Sol taraftan bir sektöre tıklayarak hisseleri görüntüleyin</p>
+            <div className="flex-1 flex items-center justify-center">
+              <EmptyState
+                illustration={<SelectIllustration />}
+                title="Sektör Seçin"
+                description="Sol taraftan bir sektöre tıklayarak hisseleri görüntüleyin, ya da üst menüden Screener veya Yatırım Üstadları sayfalarına geçin."
+                size="lg"
+              />
             </div>
           ) : (
             <>

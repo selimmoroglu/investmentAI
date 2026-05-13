@@ -6,6 +6,7 @@ import { useTheme } from "@/components/layout/ThemeProvider";
 import { api, type IndexAnalysis, type IndexQuote } from "@/lib/api";
 import { LineChart } from "@/components/charts/LineChart";
 import { changeClass, formatChange } from "@/lib/formatters";
+import { ArrowLeft, Sun, Moon } from "lucide-react";
 
 const GROUP_LABELS: Record<string, string> = {
   index: "Borsa Endeksleri",
@@ -68,23 +69,27 @@ export default function IndicesAnalysisPage() {
   return (
     <div style={{ background: "var(--bg-primary)", color: "var(--text-primary)", minHeight: "100vh" }} className="flex flex-col">
       {/* Header */}
-      <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }} className="sticky top-0 z-50 h-14 flex items-center px-5 gap-4">
+      <header
+        style={{
+          background: "var(--glass-bg)",
+          borderBottom: "1px solid var(--glass-border)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+        className="sticky top-0 z-50 h-14 flex items-center px-5 gap-4"
+      >
         <Link href="/" style={{ color: "var(--text-muted)" }} className="flex items-center gap-2 text-[13px] hover:text-[var(--text-primary)] transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ArrowLeft size={14} strokeWidth={1.8} />
           InvestmentAI
         </Link>
         <span style={{ color: "var(--border)" }}>/</span>
-        <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-medium">Endeks Analizleri</span>
+        <span style={{ color: "var(--text-primary)" }} className="text-[13px] font-semibold">Endeks Analizleri</span>
 
         <button onClick={toggle} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-          className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer">
-          {theme === "dark" ? (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-          ) : (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          )}
+          className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] transition-all"
+          aria-label="Tema değiştir"
+        >
+          {theme === "dark" ? <Sun size={13} strokeWidth={1.8} /> : <Moon size={13} strokeWidth={1.8} />}
         </button>
       </header>
 
