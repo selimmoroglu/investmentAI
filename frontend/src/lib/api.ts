@@ -248,6 +248,43 @@ export interface QualityAnalysis {
   longTermColor: "up" | "warn" | "down" | "neutral";
 }
 
+export interface DCFResult {
+  currentPrice: number | null;
+  fairValuePerShare: number | null;
+  upsidePct: number | null;
+  currency?: string | null;
+  error?: string;
+  inputs?: {
+    growth5y: number;
+    terminalGrowth: number;
+    discountRate: number;
+    startingFcf: number;
+    sharesOutstanding: number;
+    netDebt: number;
+  };
+  yearly?: { year: number; fcf: number; pv: number }[];
+  terminalValuePresent?: number;
+  enterpriseValue?: number;
+  equityValue?: number;
+  sensitivity?: { growthDelta: number; values: { discountDelta: number; fairValue: number | null; upsidePct: number | null }[] }[];
+}
+
+export interface CompositeBreakdown {
+  quality: number;
+  value: number;
+  growth: number;
+  yield: number;
+}
+
+export interface CompositeScore {
+  ticker: string;
+  score: number;
+  verdict: "Çok Cazip" | "Cazip" | "Tut" | "Pahalı" | "Kaçın";
+  verdictColor: "up" | "warn" | "down";
+  breakdown: CompositeBreakdown;
+  weights: { quality: number; value: number; growth: number; yield: number };
+}
+
 export interface IndexQuote {
   ticker: string;
   label: string;
@@ -303,4 +340,7 @@ export const api = {
     get<LegendMatches>(`/api/legends/${strategyId}/matches?market=${market}&limit=${limit}`),
   realReturn: (ticker: string) => get<RealReturn>(`/api/inflation/tr/real-return/${encodeURIComponent(ticker)}`),
   quality: (ticker: string) => get<QualityAnalysis>(`/api/quality/${encodeURIComponent(ticker)}`),
+  dcf: (ticker: string, growth = 0.10, terminal = 0.025, discount = 0.10) =>
+    get<DCFResult>(`/api/dcf/${encodeURIComponent(ticker)}?growth_5y=${growth}&terminal_growth=${terminal}&discount_rate=${discount}`),
+  composite: (ticker: string) => get<CompositeScore>(`/api/composite/${encodeURIComponent(ticker)}`),
 };

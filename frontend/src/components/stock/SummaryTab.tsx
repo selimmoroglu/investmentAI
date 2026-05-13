@@ -7,6 +7,8 @@ import { BarChart } from "@/components/charts/BarChart";
 import { LineChart } from "@/components/charts/LineChart";
 import { ValuationScore } from "./ValuationScore";
 import { QualityScoresCard } from "./QualityScoresCard";
+import { IntrinsicValueCard } from "./IntrinsicValueCard";
+import { LongTermScoreCard } from "./LongTermScoreCard";
 import { Card, Stat, Skeleton, Badge } from "@/components/ui";
 import { formatPrice, formatVolume, formatMarketCap, formatRatio, formatPercent } from "@/lib/formatters";
 
@@ -537,6 +539,15 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
       <div>
         <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">Kalite & Risk Skorları</p>
         <QualityScoresCard ticker={ticker} />
+      </div>
+
+      {/* DCF Adil Değer + Uzun Vade Skoru */}
+      <div>
+        <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">Adil Değer & Uzun Vade Skoru</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <IntrinsicValueCard ticker={ticker} />
+          <LongTermScoreCard ticker={ticker} />
+        </div>
       </div>
 
       {/* Valuation score */}
