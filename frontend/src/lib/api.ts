@@ -183,6 +183,33 @@ export interface IndexQuote {
   changePercent: number | null;
 }
 
+export interface IndexAnalysis {
+  ticker: string;
+  label: string;
+  group: "index" | "fx" | "commodity" | "crypto";
+  currentPrice: number;
+  trend: "Yükseliş" | "Düşüş" | "Yatay";
+  trendSlopePct: number;
+  valuation: "Ucuz" | "Hafif Ucuz" | "Adil" | "Hafif Pahalı" | "Pahalı";
+  valuationColor: "up" | "warn-good" | "neutral" | "warn" | "down";
+  valuationNote: string;
+  deviationFromMean5y: number;
+  zScore1y: number;
+  yearHigh: number;
+  yearLow: number;
+  yearMean: number;
+  rangePosition1y: number;
+  fiveYearHigh: number;
+  fiveYearLow: number;
+  fiveYearMean: number;
+  rangePosition5y: number;
+  movingAverages: { label: string; value: number; deviation: number; above: boolean }[];
+  support: number[];
+  resistance: number[];
+  performance: Record<string, number | null>;
+  history: { time: number; value: number }[];
+}
+
 export const api = {
   sectors: (market: Market) => get<SectorItem[]>(`/api/sectors?market=${market}`),
   sectorStocks: (sector: string, market: Market) =>
@@ -197,6 +224,7 @@ export const api = {
     get<FinancialStatement>(`/api/financials/${ticker}?statement=${statement}&freq=${freq}`),
   technicals: (ticker: string) => get<Technicals>(`/api/technicals/${ticker}`),
   indices: () => get<IndexQuote[]>(`/api/indices`),
+  indexAnalysis: (ticker: string) => get<IndexAnalysis>(`/api/indices/${encodeURIComponent(ticker)}/analysis`),
   legendMatches: (strategyId: string, market: Market, limit = 20) =>
     get<LegendMatches>(`/api/legends/${strategyId}/matches?market=${market}&limit=${limit}`),
 };

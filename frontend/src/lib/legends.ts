@@ -18,6 +18,17 @@ export interface Legend {
   quotes: string[];
   /** Renk vurgusu için ana ton */
   accent: string;
+  /** Hero/banner için ikinci gradient rengi */
+  accent2: string;
+  /** Tarihsel performans göstergeleri */
+  stats: {
+    annualReturn: string;
+    activeYears: string;
+    benchmark?: string;
+    aum?: string;
+  };
+  /** Stil etiketleri (kısa rozetler) */
+  style: string[];
 }
 
 export const LEGENDS: Legend[] = [
@@ -56,6 +67,9 @@ export const LEGENDS: Legend[] = [
       "Tutuş süremiz sonsuzluktur.",
     ],
     accent: "#0ea5e9",
+    accent2: "#1e40af",
+    stats: { annualReturn: "~%19.8", activeYears: "60+ yıl", benchmark: "S&P 500 (~%10)", aum: "$870 milyar" },
+    style: ["Değer", "Kalite", "Uzun Vade", "Konsantre"],
   },
   {
     id: "graham",
@@ -91,6 +105,9 @@ export const LEGENDS: Legend[] = [
       "Yatırımcının en büyük düşmanı muhtemelen kendisidir.",
     ],
     accent: "#a855f7",
+    accent2: "#6b21a8",
+    stats: { annualReturn: "~%14.7", activeYears: "1926-1956 (30 yıl)", benchmark: "Piyasa ortalaması (~%8)" },
+    style: ["Derin Değer", "Margin of Safety", "Net-Net", "Bilanço"],
   },
   {
     id: "lynch",
@@ -127,6 +144,9 @@ export const LEGENDS: Legend[] = [
       "Fiyat-kazanç oranının büyüme oranına eşit olduğu hisse adil fiyatlıdır.",
     ],
     accent: "#22c55e",
+    accent2: "#15803d",
+    stats: { annualReturn: "~%29.2", activeYears: "1977-1990 (13 yıl)", benchmark: "S&P 500 (~%15)", aum: "$14 milyar" },
+    style: ["GARP", "Büyüme", "Ten-Bagger", "Sezgisel"],
   },
   {
     id: "greenblatt",
@@ -158,6 +178,9 @@ export const LEGENDS: Legend[] = [
       "Magic Formula sıkıcıdır — bu yüzden işe yarar.",
     ],
     accent: "#f59e0b",
+    accent2: "#b45309",
+    stats: { annualReturn: "~%40", activeYears: "1985-2005 (Gotham)", benchmark: "S&P 500 (~%12)" },
+    style: ["Mekanik", "Magic Formula", "Sayısal", "Sistematik"],
   },
   {
     id: "munger",
@@ -193,6 +216,9 @@ export const LEGENDS: Legend[] = [
       "Bir adamın yapacağı en akıllıca şey, bekleyebilmektir.",
     ],
     accent: "#ec4899",
+    accent2: "#9d174d",
+    stats: { annualReturn: "~%19.8 (Berkshire)", activeYears: "1962-2023 (60+ yıl)", benchmark: "S&P 500 (~%10)" },
+    style: ["Kalite", "Mental Model", "Disiplin", "Sabır"],
   },
   {
     id: "fisher",
@@ -227,6 +253,9 @@ export const LEGENDS: Legend[] = [
       "Borsa kayıplarının çoğu, başarılı yatırımları erken satmaktan gelir.",
     ],
     accent: "#10b981",
+    accent2: "#065f46",
+    stats: { annualReturn: "~%20+ (tahmin)", activeYears: "1931-1999 (68 yıl)", benchmark: "S&P (~%10)" },
+    style: ["Büyüme", "Kalite", "Scuttlebutt", "Konsantre"],
   },
   {
     id: "druckenmiller",
@@ -259,6 +288,9 @@ export const LEGENDS: Legend[] = [
       "Hata yaptığını fark ettiğinde tek doğru yol pozisyonu kapatmaktır.",
     ],
     accent: "#ef4444",
+    accent2: "#991b1b",
+    stats: { annualReturn: "~%30 (Duquesne)", activeYears: "1981-2010 (30 yıl)", benchmark: "S&P 500 (~%11)", aum: "$12 milyar" },
+    style: ["Makro", "Momentum", "Konsantre", "Esnek"],
   },
 ];
 

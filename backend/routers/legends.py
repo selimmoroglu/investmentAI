@@ -17,79 +17,111 @@ def _load_tickers(market: str) -> list[dict]:
         return json.load(f)
 
 
-# Yardımcı: değer yoksa filtrede başarısız say
+# Yardımcı: değer var mı?
 def _has(r: dict, key: str) -> bool:
     return r.get(key) is not None
 
 
-# ---------- Strateji filtre fonksiyonları ----------
+# Permissive (data-tolerant) filtreler:
+# - Veri varsa threshold'a uymalı; yoksa kuralı geç (penalize değil)
+# - Her stratejide en az minimum sayıda gerçek kanıt aranır
 
 def _buffett_filter(r: dict) -> bool:
-    """Kaliteli işletme + makul fiyat — uzun vadeli sahiplik."""
-    if not _has(r, "roe") or r["roe"] < 0.12: return False
-    if not _has(r, "netMargin") or r["netMargin"] < 0.08: return False
-    if _has(r, "debtToEquity") and r["debtToEquity"] > 100: return False
-    if not _has(r, "pe") or r["pe"] <= 0 or r["pe"] > 30: return False
-    return True
+    """Kaliteli işletme + makul fiyat. yfinance eksik veri verse de elimizdekiyle değerlendiriyoruz."""
+    # Hard fails — verisi varsa kötü olmamalı
+    if _has(r, "pe") and (r["pe"] < 0 or r["pe"] > 35): return False
+    if _has(r, "roe") and r["roe"] < 0.08: return False
+    if _has(r, "netMargin") and r["netMargin"] < 0.04: return False
+    if _has(r, "debtToEquity") and r["debtToEquity"] > 200: return False
+
+    # Pozitif kanıt sayısı
+    evidence = 0
+    if _has(r, "roe") and r["roe"] >= 0.10: evidence += 1
+    if _has(r, "netMargin") and r["netMargin"] >= 0.06: evidence += 1
+    if _has(r, "pe") and 0 < r["pe"] <= 30: evidence += 1
+    if _has(r, "grossMargin") and r["grossMargin"] >= 0.20: evidence += 1
+    if _has(r, "revenueGrowth") and r["revenueGrowth"] > 0: evidence += 1
+    return evidence >= 2
 
 
 def _buffett_score(r: dict) -> float:
     score = 0.0
     score += min((r.get("roe") or 0) / 0.30, 1.0) * 30
     score += min((r.get("netMargin") or 0) / 0.25, 1.0) * 25
-    score -= min((r.get("pe") or 50) / 30, 1.0) * 15
-    score -= min((r.get("debtToEquity") or 0) / 100, 1.0) * 10
-    score += min((r.get("revenueGrowth") or 0) / 0.20, 1.0) * 10
-    return round(score, 1)
+    if r.get("pe") and r["pe"] > 0:
+        score -= min(r["pe"] / 30, 1.0) * 15
+    if r.get("debtToEquity") is not None:
+        score -= min(r["debtToEquity"] / 100, 1.0) * 10
+    score += min(max(r.get("revenueGrowth") or 0, 0) / 0.20, 1.0) * 10
+    score += min((r.get("grossMargin") or 0) / 0.50, 1.0) * 10
+    return round(max(score, 0), 1)
 
 
 def _graham_filter(r: dict) -> bool:
-    """Derin değer — defter değerine yakın fiyatlama, sağlam bilanço."""
-    if not _has(r, "pe") or r["pe"] <= 0 or r["pe"] > 15: return False
-    if not _has(r, "pb") or r["pb"] <= 0 or r["pb"] > 1.8: return False
-    if _has(r, "debtToEquity") and r["debtToEquity"] > 80: return False
-    if _has(r, "currentRatio") and r["currentRatio"] < 1.5: return False
+    """Derin değer — defter değerine yakın fiyat, sağlam bilanço."""
+    # Hard fails
+    if _has(r, "pe") and (r["pe"] <= 0 or r["pe"] > 20): return False
+    if _has(r, "pb") and (r["pb"] <= 0 or r["pb"] > 2.5): return False
+    if _has(r, "debtToEquity") and r["debtToEquity"] > 120: return False
     if _has(r, "roe") and r["roe"] < 0: return False
+    if _has(r, "currentRatio") and r["currentRatio"] < 1.0: return False
+
+    # Verisi olmayan PE/PB iddialı kabul edilemez — en az birinin olması gerek
+    has_value_ratio = (_has(r, "pe") and 0 < r["pe"] <= 18) or (_has(r, "pb") and r["pb"] <= 2.0)
+    if not has_value_ratio: return False
     return True
 
 
 def _graham_score(r: dict) -> float:
-    score = 0.0
-    score -= min((r.get("pe") or 15) / 15, 1.0) * 30
-    score -= min((r.get("pb") or 1.8) / 1.8, 1.0) * 25
-    score += min((r.get("currentRatio") or 0) / 3.0, 1.0) * 15
-    score -= min((r.get("debtToEquity") or 0) / 80, 1.0) * 10
+    score = 50.0
+    if r.get("pe") and r["pe"] > 0:
+        score -= min(r["pe"] / 15, 1.0) * 25
+    if r.get("pb") and r["pb"] > 0:
+        score -= min(r["pb"] / 1.8, 1.0) * 20
+    if r.get("currentRatio"):
+        score += min(r["currentRatio"] / 3.0, 1.0) * 15
+    if r.get("debtToEquity") is not None:
+        score -= min(r["debtToEquity"] / 80, 1.0) * 10
     if r.get("dividendYield"):
         score += min(r["dividendYield"] / 0.05, 1.0) * 10
-    return round(50 + score, 1)
+    return round(max(score, 0), 1)
 
 
 def _lynch_filter(r: dict) -> bool:
-    """GARP — makul fiyatla büyüme. PEG < 1.5 + büyüyen gelir."""
-    if _has(r, "peg") and (r["peg"] <= 0 or r["peg"] > 1.8): return False
-    if not _has(r, "pe") or r["pe"] <= 0 or r["pe"] > 35: return False
-    if not _has(r, "revenueGrowth") or r["revenueGrowth"] < 0.08: return False
-    if _has(r, "debtToEquity") and r["debtToEquity"] > 80: return False
+    """GARP — makul fiyatla büyüme."""
+    if _has(r, "pe") and (r["pe"] <= 0 or r["pe"] > 40): return False
+    if _has(r, "peg") and (r["peg"] < 0 or r["peg"] > 2.5): return False
+    if _has(r, "debtToEquity") and r["debtToEquity"] > 150: return False
+
+    # En az birinden büyüme kanıtı gerekli (PEG, revenueGrowth veya earningsGrowth)
+    has_growth_evidence = (
+        (_has(r, "peg") and 0 < r["peg"] <= 2.0) or
+        (_has(r, "revenueGrowth") and r["revenueGrowth"] >= 0.05) or
+        (_has(r, "earningsGrowth") and r["earningsGrowth"] >= 0.10)
+    )
+    if not has_growth_evidence: return False
     return True
 
 
 def _lynch_score(r: dict) -> float:
     score = 0.0
-    score += min((r.get("revenueGrowth") or 0) / 0.30, 1.0) * 30
-    score += min((r.get("earningsGrowth") or 0) / 0.30, 1.0) * 25
+    score += min(max(r.get("revenueGrowth") or 0, 0) / 0.30, 1.0) * 30
+    score += min(max(r.get("earningsGrowth") or 0, 0) / 0.30, 1.0) * 25
     if r.get("peg") and r["peg"] > 0:
         score -= min(r["peg"] / 1.5, 1.0) * 15
-    score -= min((r.get("pe") or 30) / 30, 1.0) * 10
+    if r.get("pe") and r["pe"] > 0:
+        score -= min(r["pe"] / 30, 1.0) * 10
     score += min((r.get("roe") or 0) / 0.20, 1.0) * 10
-    return round(score, 1)
+    return round(max(score, 0), 1)
 
 
 def _greenblatt_filter(r: dict) -> bool:
-    """Magic Formula — yüksek ROC + yüksek earnings yield (1/P/E)."""
-    if not _has(r, "roe") or r["roe"] < 0.15: return False
-    if not _has(r, "pe") or r["pe"] <= 0: return False
-    earnings_yield = 1 / r["pe"] if r["pe"] > 0 else 0
-    if earnings_yield < 0.07: return False  # ~ P/E < 14.3
+    """Magic Formula — yüksek kalite + ucuz fiyat."""
+    # PE ve ROE birlikte gerekli (formülün özü)
+    if not _has(r, "pe") or r["pe"] <= 0 or r["pe"] > 25: return False
+    if not _has(r, "roe") or r["roe"] < 0.10: return False
+    earnings_yield = 1 / r["pe"]
+    if earnings_yield < 0.05: return False  # P/E < 20
     return True
 
 
@@ -100,13 +132,16 @@ def _greenblatt_score(r: dict) -> float:
 
 
 def _munger_filter(r: dict) -> bool:
-    """Munger — harika işletme + makul fiyat. Buffett'tan biraz daha katı kalite."""
-    if not _has(r, "roe") or r["roe"] < 0.18: return False
-    if not _has(r, "netMargin") or r["netMargin"] < 0.10: return False
-    if _has(r, "debtToEquity") and r["debtToEquity"] > 60: return False
-    if not _has(r, "pe") or r["pe"] <= 0 or r["pe"] > 35: return False
-    if _has(r, "grossMargin") and r["grossMargin"] < 0.30: return False
-    return True
+    """Munger — harika işletme + makul fiyat. Kalite önde."""
+    if _has(r, "pe") and (r["pe"] <= 0 or r["pe"] > 40): return False
+    if _has(r, "debtToEquity") and r["debtToEquity"] > 100: return False
+
+    # Kalite kanıtı şart: ROE veya yüksek brüt marj
+    quality_evidence = 0
+    if _has(r, "roe") and r["roe"] >= 0.15: quality_evidence += 1
+    if _has(r, "grossMargin") and r["grossMargin"] >= 0.30: quality_evidence += 1
+    if _has(r, "netMargin") and r["netMargin"] >= 0.10: quality_evidence += 1
+    return quality_evidence >= 1
 
 
 def _munger_score(r: dict) -> float:
@@ -114,42 +149,45 @@ def _munger_score(r: dict) -> float:
     score += min((r.get("roe") or 0) / 0.35, 1.0) * 30
     score += min((r.get("grossMargin") or 0) / 0.60, 1.0) * 25
     score += min((r.get("netMargin") or 0) / 0.25, 1.0) * 20
-    score -= min((r.get("pe") or 35) / 35, 1.0) * 15
-    return round(score, 1)
+    if r.get("pe") and r["pe"] > 0:
+        score -= min(r["pe"] / 35, 1.0) * 15
+    return round(max(score, 0), 1)
 
 
 def _fisher_filter(r: dict) -> bool:
-    """Fisher — yüksek kaliteli büyüme şirketleri."""
-    if not _has(r, "revenueGrowth") or r["revenueGrowth"] < 0.10: return False
-    if not _has(r, "roe") or r["roe"] < 0.10: return False
-    if not _has(r, "netMargin") or r["netMargin"] < 0.05: return False
-    if _has(r, "debtToEquity") and r["debtToEquity"] > 80: return False
-    return True
+    """Fisher — yüksek kaliteli büyüme."""
+    if _has(r, "debtToEquity") and r["debtToEquity"] > 120: return False
+    # Büyüme + kalite kanıtı şart
+    has_growth = _has(r, "revenueGrowth") and r["revenueGrowth"] >= 0.08
+    has_quality = (_has(r, "roe") and r["roe"] >= 0.10) or (_has(r, "netMargin") and r["netMargin"] >= 0.05)
+    return has_growth and has_quality
 
 
 def _fisher_score(r: dict) -> float:
     score = 0.0
-    score += min((r.get("revenueGrowth") or 0) / 0.30, 1.0) * 30
-    score += min((r.get("earningsGrowth") or 0) / 0.30, 1.0) * 25
+    score += min(max(r.get("revenueGrowth") or 0, 0) / 0.30, 1.0) * 30
+    score += min(max(r.get("earningsGrowth") or 0, 0) / 0.30, 1.0) * 25
     score += min((r.get("roe") or 0) / 0.25, 1.0) * 20
     score += min((r.get("grossMargin") or 0) / 0.50, 1.0) * 15
-    return round(score, 1)
+    return round(max(score, 0), 1)
 
 
 def _druckenmiller_filter(r: dict) -> bool:
-    """Druckenmiller — momentum + makro + büyüme."""
-    if not _has(r, "earningsGrowth") or r["earningsGrowth"] < 0.15: return False
-    if not _has(r, "revenueGrowth") or r["revenueGrowth"] < 0.10: return False
-    if not _has(r, "roe") or r["roe"] < 0.12: return False
-    return True
+    """Druckenmiller — momentum + büyüme."""
+    # En az iki büyüme/kalite kanıtı (esnek)
+    evidence = 0
+    if _has(r, "earningsGrowth") and r["earningsGrowth"] >= 0.10: evidence += 1
+    if _has(r, "revenueGrowth") and r["revenueGrowth"] >= 0.08: evidence += 1
+    if _has(r, "roe") and r["roe"] >= 0.10: evidence += 1
+    return evidence >= 2
 
 
 def _druckenmiller_score(r: dict) -> float:
     score = 0.0
-    score += min((r.get("earningsGrowth") or 0) / 0.40, 1.0) * 35
-    score += min((r.get("revenueGrowth") or 0) / 0.30, 1.0) * 25
+    score += min(max(r.get("earningsGrowth") or 0, 0) / 0.40, 1.0) * 35
+    score += min(max(r.get("revenueGrowth") or 0, 0) / 0.30, 1.0) * 25
     score += min((r.get("roe") or 0) / 0.25, 1.0) * 20
-    return round(score, 1)
+    return round(max(score, 0), 1)
 
 
 STRATEGIES: dict[str, dict[str, Callable]] = {
@@ -172,7 +210,7 @@ def get_strategy_matches(
     if strategy_id not in STRATEGIES:
         raise HTTPException(status_code=404, detail=f"Unknown strategy: {strategy_id}")
 
-    cache_key = f"legends:{strategy_id}:{market}:{limit}"
+    cache_key = f"legends_v2:{strategy_id}:{market}:{limit}"
     cached = cache.get(cache_key)
     if cached:
         return cached

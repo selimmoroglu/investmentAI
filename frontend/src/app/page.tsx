@@ -151,6 +151,38 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left sector sidebar */}
         <aside style={{ background: "var(--bg-card)", borderRight: "1px solid var(--border)", width: 230, minWidth: 230 }} className="flex flex-col overflow-hidden">
+          {/* Endeks Analizleri butonu */}
+          <Link
+            href="/indices-analysis"
+            style={{
+              background: "linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.08))",
+              borderBottom: "1px solid var(--border)",
+            }}
+            className="block px-4 py-3 hover:bg-[var(--bg-secondary)] transition-all group"
+          >
+            <div className="flex items-center gap-2.5">
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                  width: 32, height: 32,
+                  boxShadow: "0 4px 10px rgba(99, 102, 241, 0.3)",
+                }}
+                className="rounded-lg flex items-center justify-center shrink-0"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 3v18h18M7 14l4-4 4 3 5-7" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p style={{ color: "var(--text-primary)" }} className="text-[12px] font-semibold leading-tight">Endeks Analizleri</p>
+                <p style={{ color: "var(--text-muted)" }} className="text-[10px] mt-0.5">BIST, NASDAQ, USD, Altın, BTC...</p>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: "var(--text-muted)" }} className="group-hover:translate-x-0.5 transition-transform">
+                <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </Link>
+
           <div style={{ borderBottom: "1px solid var(--border)" }} className="px-4 py-3">
             <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-medium">
               Sektörler — {market === "BIST" ? "Borsa İstanbul" : "ABD Borsası"}
