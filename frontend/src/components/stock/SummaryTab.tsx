@@ -6,6 +6,7 @@ import { api, type Quote, type FinancialStatement, type OHLCVBar, type RealRetur
 import { BarChart } from "@/components/charts/BarChart";
 import { LineChart } from "@/components/charts/LineChart";
 import { ValuationScore } from "./ValuationScore";
+import { QualityScoresCard } from "./QualityScoresCard";
 import { Card, Stat, Skeleton, Badge } from "@/components/ui";
 import { formatPrice, formatVolume, formatMarketCap, formatRatio, formatPercent } from "@/lib/formatters";
 
@@ -531,6 +532,12 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
           </div>
         </div>
       )}
+
+      {/* Kalite & Risk */}
+      <div>
+        <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">Kalite & Risk Skorları</p>
+        <QualityScoresCard ticker={ticker} />
+      </div>
 
       {/* Valuation score */}
       <div>

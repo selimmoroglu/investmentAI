@@ -207,6 +207,47 @@ export interface RealReturn {
   periods: RealReturnPeriod[];
 }
 
+export interface PiotroskiCriterion {
+  key: string;
+  label: string;
+  category: "profitability" | "leverage" | "efficiency";
+  passed: boolean | null;
+  skipped: boolean;
+}
+
+export interface PiotroskiScore {
+  score: number;
+  maxScore: number;
+  totalCriteria: number;
+  verdict: string;
+  verdictColor: "up" | "warn" | "down" | "neutral";
+  breakdown: PiotroskiCriterion[];
+}
+
+export interface AltmanPart {
+  key: string;
+  label: string;
+  value: number | null;
+  coef: number;
+  weighted: number | null;
+}
+
+export interface AltmanScore {
+  score: number;
+  zone: "Güvenli" | "Gri" | "Riskli";
+  zoneColor: "up" | "warn" | "down";
+  zoneDescription: string;
+  breakdown: AltmanPart[];
+}
+
+export interface QualityAnalysis {
+  ticker: string;
+  piotroski: PiotroskiScore | null;
+  altman: AltmanScore | null;
+  longTermVerdict: string;
+  longTermColor: "up" | "warn" | "down" | "neutral";
+}
+
 export interface IndexQuote {
   ticker: string;
   label: string;
@@ -261,4 +302,5 @@ export const api = {
   legendMatches: (strategyId: string, market: Market, limit = 20) =>
     get<LegendMatches>(`/api/legends/${strategyId}/matches?market=${market}&limit=${limit}`),
   realReturn: (ticker: string) => get<RealReturn>(`/api/inflation/tr/real-return/${encodeURIComponent(ticker)}`),
+  quality: (ticker: string) => get<QualityAnalysis>(`/api/quality/${encodeURIComponent(ticker)}`),
 };
