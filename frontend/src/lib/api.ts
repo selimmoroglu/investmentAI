@@ -331,6 +331,43 @@ export interface PortfolioAnalysis {
   tickerCount: number;
 }
 
+export interface BalanceSheetSignal {
+  type: "positive" | "negative" | "warning";
+  category: "growth" | "margin" | "debt" | "fcf" | "quality";
+  text: string;
+}
+
+export interface BalanceSheetAnalysis {
+  ticker: string;
+  currency: string;
+  isFinancial: boolean;
+  years: string[];
+  revenueValues: (number | null)[];
+  revenueCagr: number | null;
+  revenueGrowthLastYear: number | null;
+  revenueGrowthTrend: "improving" | "declining" | "stable";
+  netMarginValues: (number | null)[];
+  netMarginTrend: "improving" | "declining" | "stable";
+  currentNetMargin: number | null;
+  grossMarginValues: (number | null)[];
+  grossMarginTrend: "improving" | "declining" | "stable";
+  currentGrossMargin: number | null;
+  debtToEquityValues: (number | null)[];
+  debtToEquityTrend: "decreasing" | "increasing" | "stable";
+  currentDebtToEquity: number | null;
+  fcfValues: (number | null)[];
+  fcfTrend: "improving" | "declining" | "stable";
+  currentFcf: number | null;
+  roe: number | null;
+  roa: number | null;
+  piotroskiScore: number | null;
+  signals: BalanceSheetSignal[];
+  commentary: string;
+  longTermVerdict: string;
+  longTermVerdictColor: "up" | "warn" | "down" | "neutral";
+  verdictScore: number;
+}
+
 export interface PeerRow {
   ticker: string;
   name: string;
@@ -443,4 +480,6 @@ export const api = {
   portfolioQuote: (ticker: string) => get<PortfolioQuote>(`/api/portfolio/quote/${encodeURIComponent(ticker)}`),
   portfolioAnalysis: (tickers: string[], weights: number[]) =>
     get<PortfolioAnalysis>(`/api/portfolio/analysis?tickers=${tickers.map(encodeURIComponent).join(",")}&weights=${weights.join(",")}`),
+  balanceSheetAnalysis: (ticker: string) =>
+    get<BalanceSheetAnalysis>(`/api/balance-sheet/${encodeURIComponent(ticker)}`),
 };

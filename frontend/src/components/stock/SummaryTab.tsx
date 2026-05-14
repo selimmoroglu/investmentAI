@@ -10,6 +10,7 @@ import { QualityScoresCard } from "./QualityScoresCard";
 import { IntrinsicValueCard } from "./IntrinsicValueCard";
 import { LongTermScoreCard } from "./LongTermScoreCard";
 import { PeerComparisonCard } from "./PeerComparisonCard";
+import { BalanceSheetAnalysisCard } from "./BalanceSheetAnalysisCard";
 import { Card, Stat, Skeleton, Badge } from "@/components/ui";
 import { formatPrice, formatVolume, formatMarketCap, formatRatio, formatPercent } from "@/lib/formatters";
 
@@ -753,6 +754,12 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
           <IntrinsicValueCard ticker={ticker} />
           <LongTermScoreCard ticker={ticker} />
         </div>
+      </div>
+
+      {/* Bilanço Analizi */}
+      <div>
+        <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">Bilanço Analizi & Uzun Vade Yorum</p>
+        <BalanceSheetAnalysisCard ticker={ticker} />
       </div>
 
       {/* Sektör Emsalleri */}
