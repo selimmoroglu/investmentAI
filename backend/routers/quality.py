@@ -13,30 +13,63 @@ def get_quality(ticker: str):
     if pio is None and alt is None:
         raise HTTPException(status_code=404, detail=f"Kalite skorları hesaplanamadı: {ticker}")
 
-    # Composite long-term verdict
+    is_financial = (pio or {}).get("isFinancial", False) or (alt or {}).get("modelType") == "not_applicable"
+    alt_not_applicable = alt is not None and alt.get("modelType") == "not_applicable"
+
     long_term_verdict = "Yetersiz Veri"
     long_term_color = "neutral"
-    if pio and alt:
-        if pio["score"] >= 7 and alt["zone"] == "Güvenli":
-            long_term_verdict = "Uzun Vade İçin Güçlü"
-            long_term_color = "up"
-        elif pio["score"] >= 5 and alt["zone"] != "Riskli":
-            long_term_verdict = "Uzun Vade İçin İyi"
-            long_term_color = "up"
-        elif pio["score"] <= 3 or alt["zone"] == "Riskli":
-            long_term_verdict = "Risk Var"
-            long_term_color = "down"
-        else:
-            long_term_verdict = "Dikkatli"
-            long_term_color = "warn"
-    elif pio:
-        if pio["score"] >= 7: long_term_verdict, long_term_color = "Uzun Vade İçin Güçlü", "up"
-        elif pio["score"] >= 5: long_term_verdict, long_term_color = "Uzun Vade İçin İyi", "up"
-        elif pio["score"] <= 3: long_term_verdict, long_term_color = "Zayıf Kalite", "down"
-        else: long_term_verdict, long_term_color = "Dikkatli", "warn"
-    elif alt:
-        long_term_verdict = "İflas Riski " + alt["zone"]
-        long_term_color = alt["zoneColor"]
+
+    if is_financial:
+        # Finansal şirketler için farklı değerlendirme
+        if pio and alt:
+            cap_color = alt.get("zoneColor", "neutral")
+            pio_good = pio["score"] >= 4
+            if cap_color == "up" and pio_good:
+                long_term_verdict = "Sermaye Sağlam, Kalite Yeterli"
+                long_term_color = "up"
+            elif cap_color == "down" or pio["score"] <= 2:
+                long_term_verdict = "Risk İşaretleri Var"
+                long_term_color = "down"
+            else:
+                long_term_verdict = "Dikkatli Takip Gerekli"
+                long_term_color = "warn"
+        elif pio:
+            if pio["score"] >= 6:
+                long_term_verdict, long_term_color = "Operasyonel Kalite Güçlü", "up"
+            elif pio["score"] <= 2:
+                long_term_verdict, long_term_color = "Zayıf Operasyonel Kalite", "down"
+            else:
+                long_term_verdict, long_term_color = "Orta Kalite", "warn"
+        elif alt:
+            long_term_verdict = alt.get("zoneDescription", "Finans Şirketi")[:60]
+            long_term_color = alt.get("zoneColor", "neutral")
+    else:
+        # Endüstriyel şirketler — standart değerlendirme
+        if pio and alt:
+            if pio["score"] >= 7 and alt["zone"] == "Güvenli":
+                long_term_verdict = "Uzun Vade İçin Güçlü"
+                long_term_color = "up"
+            elif pio["score"] >= 5 and alt["zone"] != "Riskli":
+                long_term_verdict = "Uzun Vade İçin İyi"
+                long_term_color = "up"
+            elif pio["score"] <= 3 or alt["zone"] == "Riskli":
+                long_term_verdict = "Risk Var"
+                long_term_color = "down"
+            else:
+                long_term_verdict = "Dikkatli"
+                long_term_color = "warn"
+        elif pio:
+            if pio["score"] >= 7:
+                long_term_verdict, long_term_color = "Uzun Vade İçin Güçlü", "up"
+            elif pio["score"] >= 5:
+                long_term_verdict, long_term_color = "Uzun Vade İçin İyi", "up"
+            elif pio["score"] <= 3:
+                long_term_verdict, long_term_color = "Zayıf Kalite", "down"
+            else:
+                long_term_verdict, long_term_color = "Dikkatli", "warn"
+        elif alt:
+            long_term_verdict = "İflas Riski " + alt["zone"]
+            long_term_color = alt["zoneColor"]
 
     return {
         "ticker": ticker,
@@ -44,4 +77,5 @@ def get_quality(ticker: str):
         "altman": alt,
         "longTermVerdict": long_term_verdict,
         "longTermColor": long_term_color,
+        "isFinancial": is_financial,
     }

@@ -107,6 +107,7 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
   const [incomeQ, setIncomeQ] = useState<FinancialStatement | null>(null);
   const [incomeA, setIncomeA] = useState<FinancialStatement | null>(null);
   const [balanceA, setBalanceA] = useState<FinancialStatement | null>(null);
+  const [cashflowA, setCashflowA] = useState<FinancialStatement | null>(null);
   const [history, setHistory] = useState<OHLCVBar[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("6A");
   const [freq, setFreq] = useState<Freq>("quarterly");
@@ -117,6 +118,7 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
   useEffect(() => {
     setLoadingInit(true);
     setRealReturn(null);
+    setCashflowA(null);
     const { period, interval } = PERIOD_MAP[selectedPeriod];
     Promise.all([
       api.quote(ticker),
@@ -132,7 +134,8 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
       setHistory(hist);
     }).catch(console.error).finally(() => setLoadingInit(false));
 
-    // Reel getiri sadece BIST hisseleri için
+    // Nakit akışı ve reel getiri — ayrı yükle (kritik path değil)
+    api.financials(ticker, "cashflow", "annual").then(setCashflowA).catch(() => null);
     if (ticker.toUpperCase().endsWith(".IS")) {
       api.realReturn(ticker).then(setRealReturn).catch(() => setRealReturn(null));
     }
@@ -203,6 +206,50 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
   const incPrev = annCols[1];
   const balLatest = balCols[0];
   const balPrev = balCols[1];
+
+  // Nakit akışı — yıllık
+  const cfCols = cashflowA?.columns ?? [];
+  const cfOcf = parseFinRow(cashflowA, ["Operating Cash Flow", "Cash Flow From Continuing Operating Activities"]);
+  const cfCapex = parseFinRow(cashflowA, ["Capital Expenditure", "Purchase Of Ppe", "Capital Expenditures"]);
+  const cfFcfRow = parseFinRow(cashflowA, ["Free Cash Flow"]);
+  const cfFcf = cfFcfRow.length > 0
+    ? cfFcfRow
+    : cfOcf.map((ocf, i) => {
+        const cap = cfCapex[i];
+        return ocf != null && cap != null ? ocf - Math.abs(cap) : null;
+      });
+  const hasCashflow = cfCols.length >= 1 && cfOcf.length >= 1 && cfOcf[0] != null;
+
+  // Çeyreklik snapshot: son 4-8 çeyrek YoY + QoQ
+  const qCols = (incomeQ?.columns ?? []).slice(0, 8);
+  const qRevenue = parseFinRow(incomeQ, ["Total Revenue", "Revenue"]);
+  const qNetIncome = parseFinRow(incomeQ, ["Net Income"]);
+  const qGrossProfit = parseFinRow(incomeQ, ["Gross Profit"]);
+  const qOpIncome = parseFinRow(incomeQ, ["Operating Income", "Ebit"]);
+  const qEps = parseFinRow(incomeQ, ["Diluted EPS", "Basic EPS"]);
+
+  const qYoY = (arr: (number | null)[], idx: number): number | null => {
+    const curr = arr[idx]; const prev = arr[idx + 4];
+    if (curr == null || prev == null || prev === 0) return null;
+    return ((curr - prev) / Math.abs(prev)) * 100;
+  };
+  const qQoQ = (arr: (number | null)[], idx: number): number | null => {
+    const curr = arr[idx]; const prev = arr[idx + 1];
+    if (curr == null || prev == null || prev === 0) return null;
+    return ((curr - prev) / Math.abs(prev)) * 100;
+  };
+  const qNetMargin = qCols.map((_, i) => {
+    const rev = qRevenue[i]; const ni = qNetIncome[i];
+    return rev && rev !== 0 && ni != null ? (ni / rev) * 100 : null;
+  });
+  const qGrossMargin = qCols.map((_, i) => {
+    const rev = qRevenue[i]; const gp = qGrossProfit[i];
+    return rev && rev !== 0 && gp != null ? (gp / rev) * 100 : null;
+  });
+
+  // Son 4 çeyreği göster (idx 0 = en son), en eskiden yeniye (görsel için reverse)
+  const SHOW_Q = Math.min(4, qCols.length);
+  const hasQuarterly = SHOW_Q >= 2 && qRevenue.slice(0, SHOW_Q).some(v => v != null);
 
   return (
     <div className="p-5 space-y-5 max-w-[1100px]">
@@ -424,7 +471,132 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
         </div>
       )}
 
-      {/* Özet Finansallar — two column table */}
+      {/* Çeyreklik Anlık Görünüm — son 4 çeyrek */}
+      {hasQuarterly && (
+        <div>
+          <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">
+            Çeyreklik Anlık Görünüm
+          </p>
+          <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-xl overflow-hidden">
+            {/* Kolon başlıkları */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11.5px]" style={{ minWidth: 480 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-tertiary)" }}>
+                    <th className="text-left px-4 py-2.5 font-semibold" style={{ color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em", width: 130 }}>
+                      Metrik
+                    </th>
+                    {Array.from({ length: SHOW_Q }).map((_, qi) => {
+                      const revIdx = SHOW_Q - 1 - qi; // eskiden yeniye sıralı
+                      return (
+                        <th key={qi} className="text-right px-3 py-2.5 font-semibold" style={{ color: "var(--text-secondary)", fontSize: 11 }}>
+                          {qCols[revIdx] ?? `Q${qi + 1}`}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    {
+                      label: "Hasılat",
+                      values: qRevenue,
+                      fmtVal: (v: number | null) => fmtBig(v, quote.currency),
+                      isMargin: false,
+                    },
+                    {
+                      label: "Net Kar",
+                      values: qNetIncome,
+                      fmtVal: (v: number | null) => fmtBig(v, quote.currency),
+                      isMargin: false,
+                    },
+                    {
+                      label: "Net Kar Marjı",
+                      values: qNetMargin,
+                      fmtVal: (v: number | null) => v != null ? `${v.toFixed(1)}%` : "—",
+                      isMargin: true,
+                    },
+                    {
+                      label: "Brüt Marj",
+                      values: qGrossMargin,
+                      fmtVal: (v: number | null) => v != null ? `${v.toFixed(1)}%` : "—",
+                      isMargin: true,
+                    },
+                    ...(qEps.some(v => v != null) ? [{
+                      label: "HBK (EPS)",
+                      values: qEps,
+                      fmtVal: (v: number | null) => v != null ? v.toFixed(2) : "—",
+                      isMargin: false,
+                    }] : []),
+                  ].map((row, ri) => (
+                    <tr key={ri} style={{ borderBottom: ri < 4 ? "1px solid var(--border)" : "none" }}>
+                      <td className="px-4 py-2" style={{ color: "var(--text-muted)", fontSize: 11.5 }}>
+                        {row.label}
+                      </td>
+                      {Array.from({ length: SHOW_Q }).map((_, qi) => {
+                        const revIdx = SHOW_Q - 1 - qi;
+                        const val = row.values[revIdx];
+                        const yoy = !row.isMargin ? qYoY(row.values, revIdx) : null;
+                        const qoq = !row.isMargin ? qQoQ(row.values, revIdx) : null;
+                        // Marj için QoQ pp fark
+                        const marginQoQ = row.isMargin && val != null && row.values[revIdx + 1] != null
+                          ? val - (row.values[revIdx + 1] as number)
+                          : null;
+                        const marginYoY = row.isMargin && val != null && row.values[revIdx + 4] != null
+                          ? val - (row.values[revIdx + 4] as number)
+                          : null;
+
+                        return (
+                          <td key={qi} className="text-right px-3 py-2">
+                            <div style={{ color: "var(--text-primary)" }} className="text-[12px] font-medium tabular-nums">
+                              {val != null ? row.fmtVal(val) : "—"}
+                            </div>
+                            <div className="flex justify-end gap-1 mt-0.5">
+                              {/* YoY */}
+                              {(yoy != null || marginYoY != null) && (() => {
+                                const pct = yoy ?? marginYoY;
+                                const isUp = pct! >= 0;
+                                const label = row.isMargin
+                                  ? `${pct! >= 0 ? "+" : ""}${pct!.toFixed(1)}pp Y`
+                                  : `${pct! >= 0 ? "+" : ""}${pct!.toFixed(1)}% Y`;
+                                return (
+                                  <span style={{ color: isUp ? "var(--up)" : "var(--down)", fontSize: 9.5, fontWeight: 500 }}>
+                                    {label}
+                                  </span>
+                                );
+                              })()}
+                              {/* QoQ */}
+                              {(qoq != null || marginQoQ != null) && (() => {
+                                const pct = qoq ?? marginQoQ;
+                                const isUp = pct! >= 0;
+                                const label = row.isMargin
+                                  ? `${pct! >= 0 ? "+" : ""}${pct!.toFixed(1)}pp Q`
+                                  : `${pct! >= 0 ? "+" : ""}${pct!.toFixed(1)}% Q`;
+                                return (
+                                  <span style={{ color: isUp ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)", fontSize: 9.5 }}>
+                                    {label}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 py-2" style={{ borderTop: "1px solid var(--border)", background: "var(--bg-tertiary)" }}>
+              <p style={{ color: "var(--text-muted)" }} className="text-[10px]">
+                Y = Yıldan Yıla (aynı çeyrek) · Q = Çeyrekten Çeyreğe · pp = yüzde puan fark
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Özet Finansallar — yıllık */}
       {hasFinSummary && (
         <div>
           <p style={{ color: "var(--text-muted)" }} className="text-[11px] uppercase tracking-wider mb-3 font-medium">Özet Finansallar (Yıllık)</p>
@@ -445,6 +617,21 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
                 {annEps[0] != null && (
                   <FinSummaryRow label="HBK (EPS)" current={annEps[0] ?? null} previous={annEps[1] ?? null} currency={null} />
                 )}
+                {/* Nakit akışı özeti */}
+                {hasCashflow && (
+                  <>
+                    <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                      <p style={{ color: "var(--text-muted)" }} className="text-[9.5px] uppercase tracking-wide font-semibold mb-1">Nakit Akışı</p>
+                    </div>
+                    <FinSummaryRow label="İşletme Nakit Akışı (OCF)" current={cfOcf[0] ?? null} previous={cfOcf[1] ?? null} currency={quote.currency} />
+                    {cfCapex[0] != null && (
+                      <FinSummaryRow label="Sermaye Harcaması (CapEx)" current={cfCapex[0] != null ? -Math.abs(cfCapex[0]) : null} previous={cfCapex[1] != null ? -Math.abs(cfCapex[1]) : null} currency={quote.currency} />
+                    )}
+                    {cfFcf[0] != null && (
+                      <FinSummaryRow label="Serbest Nakit Akışı (FCF)" current={cfFcf[0] ?? null} previous={cfFcf[1] ?? null} currency={quote.currency} />
+                    )}
+                  </>
+                )}
               </div>
             )}
             {hasBalanceSummary && (
@@ -460,6 +647,23 @@ export function SummaryTab({ ticker }: SummaryTabProps) {
                 <FinSummaryRow label="Özsermaye" current={balEquity[0] ?? null} previous={balEquity[1] ?? null} currency={quote.currency} />
                 {balNetDebt[0] != null && (
                   <FinSummaryRow label="Net Borç" current={balNetDebt[0] ?? null} previous={balNetDebt[1] ?? null} currency={quote.currency} />
+                )}
+                {/* FCF / Revenue (nakit üretkenliği) */}
+                {cfFcf[0] != null && annRevenue[0] != null && annRevenue[0] !== 0 && (
+                  <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                    <p style={{ color: "var(--text-muted)" }} className="text-[9.5px] uppercase tracking-wide font-semibold mb-1">Kârlılık Oranları</p>
+                    {annRevenue[0] && cfFcf[0] && (() => {
+                      const fcfMargin = (cfFcf[0]! / annRevenue[0]!) * 100;
+                      const fcfColor = fcfMargin >= 10 ? "var(--up)" : fcfMargin >= 5 ? "var(--text-primary)" : "var(--down)";
+                      return (
+                        <div style={{ borderBottom: "1px solid var(--border)" }} className="grid grid-cols-[1fr_auto_70px] items-center gap-3 py-2 last:border-b-0">
+                          <span style={{ color: "var(--text-secondary)" }} className="text-[12px]">FCF Marjı</span>
+                          <span style={{ color: fcfColor }} className="text-[12px] font-medium tabular-nums text-right">{fcfMargin.toFixed(1)}%</span>
+                          <span style={{ color: "var(--text-muted)" }} className="text-[11px] tabular-nums text-right">—</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 )}
               </div>
             )}

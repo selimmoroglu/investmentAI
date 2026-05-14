@@ -222,6 +222,7 @@ export interface PiotroskiScore {
   verdict: string;
   verdictColor: "up" | "warn" | "down" | "neutral";
   breakdown: PiotroskiCriterion[];
+  isFinancial?: boolean;
 }
 
 export interface AltmanPart {
@@ -232,12 +233,25 @@ export interface AltmanPart {
   weighted: number | null;
 }
 
+export interface AltmanAlternativeMetric {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  verdict: string;
+  color: "up" | "warn" | "down" | "neutral";
+}
+
 export interface AltmanScore {
-  score: number;
-  zone: "Güvenli" | "Gri" | "Riskli";
-  zoneColor: "up" | "warn" | "down";
+  score: number | null;
+  zone: string;
+  zoneColor: "up" | "warn" | "down" | "neutral";
   zoneDescription: string;
+  modelType?: "standard_z" | "not_applicable";
+  notApplicableReason?: string;
   breakdown: AltmanPart[];
+  alternativeMetrics?: AltmanAlternativeMetric[];
+  capitalRatio?: number | null;
 }
 
 export interface QualityAnalysis {
@@ -246,6 +260,7 @@ export interface QualityAnalysis {
   altman: AltmanScore | null;
   longTermVerdict: string;
   longTermColor: "up" | "warn" | "down" | "neutral";
+  isFinancial?: boolean;
 }
 
 export interface DCFResult {
@@ -254,6 +269,9 @@ export interface DCFResult {
   upsidePct: number | null;
   currency?: string | null;
   error?: string;
+  valuationMethod?: "fcf_dcf" | "earnings_dcf";
+  methodNote?: string;
+  isFinancial?: boolean;
   inputs?: {
     growth5y: number;
     terminalGrowth: number;
@@ -283,6 +301,7 @@ export interface CompositeScore {
   verdictColor: "up" | "warn" | "down";
   breakdown: CompositeBreakdown;
   weights: { quality: number; value: number; growth: number; yield: number };
+  isFinancial?: boolean;
 }
 
 export interface PeerRow {
