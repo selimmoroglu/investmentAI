@@ -285,6 +285,30 @@ export interface CompositeScore {
   weights: { quality: number; value: number; growth: number; yield: number };
 }
 
+export interface PeerRow {
+  ticker: string;
+  name: string;
+  isOwn: boolean;
+  currentPrice: number | null;
+  changePercent: number | null;
+  currency: string | null;
+  marketCap: number | null;
+  pe: number | null;
+  pb: number | null;
+  roe: number | null;
+  netMargin: number | null;
+  debtToEquity: number | null;
+  dividendYield: number | null;
+  fcfYield: number | null;
+}
+
+export interface PeerComparison {
+  ticker: string;
+  sector: string;
+  market: Market;
+  peers: PeerRow[];
+}
+
 export interface IndexQuote {
   ticker: string;
   label: string;
@@ -343,4 +367,5 @@ export const api = {
   dcf: (ticker: string, growth = 0.10, terminal = 0.025, discount = 0.10) =>
     get<DCFResult>(`/api/dcf/${encodeURIComponent(ticker)}?growth_5y=${growth}&terminal_growth=${terminal}&discount_rate=${discount}`),
   composite: (ticker: string) => get<CompositeScore>(`/api/composite/${encodeURIComponent(ticker)}`),
+  peers: (ticker: string, limit = 5) => get<PeerComparison>(`/api/peers/${encodeURIComponent(ticker)}?limit=${limit}`),
 };
