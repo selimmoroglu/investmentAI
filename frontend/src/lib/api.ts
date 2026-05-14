@@ -304,6 +304,33 @@ export interface CompositeScore {
   isFinancial?: boolean;
 }
 
+export interface PortfolioPositionAnalysis {
+  ticker: string;
+  sector: string;
+  compositeScore: number | null;
+  compositeVerdict: string;
+  verdictColor: "up" | "warn" | "down" | "neutral";
+  breakdown: CompositeBreakdown | null;
+  isFinancial: boolean;
+  weight: number;
+}
+
+export interface PortfolioAnalysis {
+  portfolioScore: number;
+  portfolioVerdict: string;
+  portfolioVerdictColor: "up" | "warn" | "down";
+  portfolioBreakdown: CompositeBreakdown;
+  concentrationHHI: number;
+  concentrationLabel: string;
+  concentrationColor: "up" | "warn" | "down";
+  diversificationScore: number;
+  topPositionWeight: number;
+  sectorBreakdown: Record<string, number>;
+  sectorCount: number;
+  positions: PortfolioPositionAnalysis[];
+  tickerCount: number;
+}
+
 export interface PeerRow {
   ticker: string;
   name: string;
@@ -414,4 +441,6 @@ export const api = {
   peers: (ticker: string, limit = 5) => get<PeerComparison>(`/api/peers/${encodeURIComponent(ticker)}?limit=${limit}`),
   portfolioPerf: (tickers: string[]) => get<PortfolioPerf>(`/api/portfolio/perf?tickers=${tickers.map(encodeURIComponent).join(",")}`),
   portfolioQuote: (ticker: string) => get<PortfolioQuote>(`/api/portfolio/quote/${encodeURIComponent(ticker)}`),
+  portfolioAnalysis: (tickers: string[], weights: number[]) =>
+    get<PortfolioAnalysis>(`/api/portfolio/analysis?tickers=${tickers.map(encodeURIComponent).join(",")}&weights=${weights.join(",")}`),
 };
