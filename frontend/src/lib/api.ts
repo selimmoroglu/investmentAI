@@ -364,6 +364,31 @@ export interface IndexAnalysis {
   history: { time: number; value: number }[];
 }
 
+export interface PortfolioPerfItem {
+  currentPrice: number;
+  prevClose: number | null;
+  weekAgoPrice: number | null;
+  monthAgoPrice: number | null;
+  yearAgoPrice: number | null;
+  changePercent1d: number | null;
+  changePercent1w: number | null;
+  changePercent1m: number | null;
+  changePercent1y: number | null;
+  currency: string;
+  name: string;
+}
+
+export type PortfolioPerf = Record<string, PortfolioPerfItem>;
+
+export interface PortfolioQuote {
+  ticker: string;
+  name: string;
+  currency: string;
+  currentPrice: number | null;
+  market: "BIST" | "US";
+  sector: string;
+}
+
 export const api = {
   sectors: (market: Market) => get<SectorItem[]>(`/api/sectors?market=${market}`),
   sectorStocks: (sector: string, market: Market) =>
@@ -387,4 +412,6 @@ export const api = {
     get<DCFResult>(`/api/dcf/${encodeURIComponent(ticker)}?growth_5y=${growth}&terminal_growth=${terminal}&discount_rate=${discount}`),
   composite: (ticker: string) => get<CompositeScore>(`/api/composite/${encodeURIComponent(ticker)}`),
   peers: (ticker: string, limit = 5) => get<PeerComparison>(`/api/peers/${encodeURIComponent(ticker)}?limit=${limit}`),
+  portfolioPerf: (tickers: string[]) => get<PortfolioPerf>(`/api/portfolio/perf?tickers=${tickers.map(encodeURIComponent).join(",")}`),
+  portfolioQuote: (ticker: string) => get<PortfolioQuote>(`/api/portfolio/quote/${encodeURIComponent(ticker)}`),
 };

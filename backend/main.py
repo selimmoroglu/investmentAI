@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import stocks, quote, history, financials, technicals, sectors, ratios, indices, legends, inflation, quality, valuation, peers
+from .routers import stocks, quote, history, financials, technicals, sectors, ratios, indices, legends, inflation, quality, valuation, peers, portfolio_perf
 
 app = FastAPI(title="InvestmentAI API", version="1.0.0")
 
@@ -25,6 +25,7 @@ app.include_router(inflation.router, prefix="/api")
 app.include_router(quality.router, prefix="/api")
 app.include_router(valuation.router, prefix="/api")
 app.include_router(peers.router, prefix="/api")
+app.include_router(portfolio_perf.router, prefix="/api")
 
 
 @app.get("/")

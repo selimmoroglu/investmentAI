@@ -10,7 +10,7 @@ import { WatchlistPanel } from "@/components/watchlist/WatchlistPanel";
 import { IndicesBar } from "@/components/layout/IndicesBar";
 import { Badge, Skeleton, EmptyState, SelectIllustration } from "@/components/ui";
 import { trSector } from "@/lib/sectorTr";
-import { Search, SlidersHorizontal, Sparkles, Sun, Moon, BarChart3, ArrowRight, Inbox } from "lucide-react";
+import { Search, SlidersHorizontal, Sparkles, Sun, Moon, BarChart3, ArrowRight, Inbox, Briefcase } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -128,6 +128,16 @@ export default function Home() {
             Screener
           </Link>
 
+          {/* Portföy */}
+          <Link
+            href="/portfolio"
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-all"
+          >
+            <Briefcase size={13} strokeWidth={1.8} />
+            Portföy
+          </Link>
+
           {/* Market toggle */}
           <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="flex rounded-lg p-[3px] gap-[2px]">
             {(["BIST", "US"] as Market[]).map((m) => (
@@ -189,6 +199,33 @@ export default function Home() {
               <div className="flex-1 min-w-0">
                 <p style={{ color: "var(--text-primary)" }} className="text-[12px] font-semibold leading-tight">Endeks Analizleri</p>
                 <p style={{ color: "var(--text-muted)" }} className="text-[10px] mt-0.5">BIST, NASDAQ, USD, Altın, BTC...</p>
+              </div>
+              <ArrowRight size={14} color="var(--text-muted)" strokeWidth={1.8} className="group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Portföy butonu */}
+          <Link
+            href="/portfolio"
+            style={{
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.10), rgba(5, 150, 105, 0.06))",
+              borderBottom: "1px solid var(--border)",
+            }}
+            className="block px-4 py-3 hover:bg-[var(--bg-secondary)] transition-all group"
+          >
+            <div className="flex items-center gap-2.5">
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #10b981, #059669)",
+                  width: 32, height: 32,
+                }}
+                className="rounded-lg flex items-center justify-center shrink-0"
+              >
+                <Briefcase size={15} color="#fff" strokeWidth={2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p style={{ color: "var(--text-primary)" }} className="text-[12px] font-semibold leading-tight">Portföy</p>
+                <p style={{ color: "var(--text-muted)" }} className="text-[10px] mt-0.5">Hisselerini takip et, getiri gör</p>
               </div>
               <ArrowRight size={14} color="var(--text-muted)" strokeWidth={1.8} className="group-hover:translate-x-0.5 transition-transform" />
             </div>
