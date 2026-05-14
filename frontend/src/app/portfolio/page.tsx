@@ -348,6 +348,7 @@ export default function PortfolioPage() {
   // ── Enriched positions ────────────────────────────────────────────────────
 
   const enriched = useMemo(() => {
+    const today = new Date();
     return positions.map((pos) => {
       const p = perf[pos.ticker];
       const currentPrice = p?.currentPrice ?? pos.buyPrice;
@@ -365,7 +366,13 @@ export default function PortfolioPage() {
         : periodKey && p && (p[periodKey] as number | null) != null
         ? currentValue * ((p[periodKey] as number) / 100)
         : null;
-      return { ...pos, currentPrice, currentValue, investedValue, pnl, pnlPct, periodPct, periodPnl, hasPerf: !!p };
+      const daysSinceBuy = pos.buyDate
+        ? Math.max(1, Math.round((today.getTime() - new Date(pos.buyDate).getTime()) / (1000 * 60 * 60 * 24)))
+        : null;
+      const annualizedReturn = daysSinceBuy != null && pnlPct != null
+        ? (Math.pow(1 + pnlPct / 100, 365 / daysSinceBuy) - 1) * 100
+        : null;
+      return { ...pos, currentPrice, currentValue, investedValue, pnl, pnlPct, periodPct, periodPnl, hasPerf: !!p, daysSinceBuy, annualizedReturn };
     });
   }, [positions, perf, period]);
 
@@ -586,7 +593,7 @@ export default function PortfolioPage() {
           <p style={{ color: "var(--text-muted)" }} className="text-[11px]">Başlığa tıklayarak sırala</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full" style={{ minWidth: 780 }}>
+          <table className="w-full" style={{ minWidth: 980 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-tertiary)" }}>
                 {[
@@ -597,6 +604,8 @@ export default function PortfolioPage() {
                   { label: "Piyasa Değeri", key: "value" as const },
                   { label: "K/Z", key: "pnl" as const },
                   { label: "K/Z %", key: "pnlPct" as const },
+                  { label: "Yıl. Getiri", key: null },
+                  { label: "Tutuş", key: null },
                   { label: PERIOD_LABELS[period], key: "period" as const },
                   { label: "", key: null },
                 ].map((col, i) => (
@@ -648,6 +657,24 @@ export default function PortfolioPage() {
                         {fmtPct(pos.pnlPct)}
                       </span>
                     </td>
+                    <td className="text-right px-3 py-3">
+                      {pos.annualizedReturn != null ? (
+                        <span style={{ color: pos.annualizedReturn >= 0 ? "var(--up)" : "var(--down)", fontSize: 12, fontWeight: 600 }} className="tabular-nums">
+                          {fmtPct(pos.annualizedReturn)}
+                        </span>
+                      ) : <span style={{ color: "var(--text-muted)" }} className="text-[11px]">—</span>}
+                    </td>
+                    <td className="text-right px-3 py-3">
+                      {pos.daysSinceBuy != null ? (
+                        <span style={{ color: "var(--text-muted)", fontSize: 11 }} className="tabular-nums">
+                          {pos.daysSinceBuy >= 365
+                            ? `${(pos.daysSinceBuy / 365).toFixed(1)}y`
+                            : pos.daysSinceBuy >= 30
+                            ? `${Math.round(pos.daysSinceBuy / 30)}ay`
+                            : `${pos.daysSinceBuy}g`}
+                        </span>
+                      ) : <span style={{ color: "var(--text-muted)" }} className="text-[11px]">—</span>}
+                    </td>
                     <td className="text-right px-3 py-3"><PerfBar value={pos.periodPct} maxAbs={maxAbsPeriod} /></td>
                     <td className="text-right px-3 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -672,6 +699,63 @@ export default function PortfolioPage() {
           </table>
         </div>
       </div>
+
+      {/* Performans Özeti */}
+      {enriched.length > 0 && (() => {
+        const totalInvested = enriched.reduce((s, p) => s + p.investedValue, 0);
+        const totalValue = enriched.reduce((s, p) => s + p.currentValue, 0);
+        const totalPnlPct = totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested) * 100 : null;
+        const winCount = enriched.filter((p) => p.pnl > 0).length;
+        const loseCount = enriched.filter((p) => p.pnl < 0).length;
+        const bestPos = enriched.reduce((best, p) => (p.pnlPct ?? -Infinity) > (best.pnlPct ?? -Infinity) ? p : best, enriched[0]);
+        const worstPos = enriched.reduce((worst, p) => (p.pnlPct ?? Infinity) < (worst.pnlPct ?? Infinity) ? p : worst, enriched[0]);
+        const avgHolding = enriched.filter((p) => p.daysSinceBuy).reduce((s, p) => s + (p.daysSinceBuy ?? 0), 0) / (enriched.filter((p) => p.daysSinceBuy).length || 1);
+        return (
+          <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-2xl p-5">
+            <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-semibold mb-4">Performans Özeti</p>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-5">
+              {[
+                { label: "Kazanma Oranı", value: enriched.length > 0 ? `${Math.round((winCount / enriched.length) * 100)}%` : "—", sub: `${winCount} kâr / ${loseCount} zarar`, color: winCount >= loseCount ? "var(--up)" : "var(--down)" },
+                { label: "Toplam Getiri", value: fmtPct(totalPnlPct), sub: fmtBig(totalValue - totalInvested, tryPositions.length >= usdPositions.length ? "TRY" : "USD"), color: (totalPnlPct ?? 0) >= 0 ? "var(--up)" : "var(--down)" },
+                { label: "En İyi Hisse", value: fmtPct(bestPos?.pnlPct), sub: bestPos?.ticker.replace(".IS", "") ?? "—", color: "var(--up)" },
+                { label: "En Kötü Hisse", value: fmtPct(worstPos?.pnlPct), sub: worstPos?.ticker.replace(".IS", "") ?? "—", color: "var(--down)" },
+                { label: "Ort. Tutuş", value: avgHolding >= 365 ? `${(avgHolding / 365).toFixed(1)}y` : avgHolding >= 30 ? `${Math.round(avgHolding / 30)}ay` : `${Math.round(avgHolding)}g`, sub: "ortalama", color: "var(--text-primary)" },
+              ].map((stat, i) => (
+                <div key={i}>
+                  <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-semibold mb-1">{stat.label}</p>
+                  <p style={{ color: stat.color, fontSize: 18, fontWeight: 800 }} className="tabular-nums leading-tight">{stat.value}</p>
+                  <p style={{ color: "var(--text-muted)" }} className="text-[11px] mt-0.5">{stat.sub}</p>
+                </div>
+              ))}
+            </div>
+            {/* Katkı Analizi */}
+            <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-semibold mb-3">Portföy Katkı Analizi</p>
+            <div className="space-y-2">
+              {[...enriched].sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl)).map((pos) => {
+                const contrib = totalInvested > 0 ? (pos.pnl / totalInvested) * 100 : 0;
+                const maxContrib = enriched.reduce((m, p) => Math.max(m, Math.abs(totalInvested > 0 ? (p.pnl / totalInvested) * 100 : 0)), 0.001);
+                const barPct = Math.min(Math.abs(contrib) / maxContrib, 1) * 100;
+                const isPos = contrib >= 0;
+                return (
+                  <div key={pos.id} className="flex items-center gap-3">
+                    <span style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, width: 60, flexShrink: 0 }} className="truncate">{pos.ticker.replace(".IS", "")}</span>
+                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-tertiary)" }}>
+                      <div style={{ width: `${barPct}%`, height: "100%", background: isPos ? "var(--up)" : "var(--down)", borderRadius: 4 }} />
+                    </div>
+                    <span style={{ color: isPos ? "var(--up)" : "var(--down)", fontSize: 11, fontWeight: 700, width: 56, textAlign: "right" }} className="tabular-nums">
+                      {contrib >= 0 ? "+" : ""}{contrib.toFixed(2)}pp
+                    </span>
+                    <span style={{ color: "var(--text-muted)", fontSize: 11, width: 56, textAlign: "right" }} className="tabular-nums">
+                      {fmtBig(pos.pnl, pos.currency)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p style={{ color: "var(--text-muted)" }} className="text-[10px] mt-3">pp = yüzde puan katkı (toplam yatırıma göre)</p>
+          </div>
+        );
+      })()}
 
       {/* Grafikler */}
       {enriched.length >= 2 && allocationData.length > 0 && (
@@ -766,6 +850,76 @@ export default function PortfolioPage() {
             ))}
           </div>
         )}
+
+        {/* Performans İstatistikleri */}
+        {rm && (() => {
+          const validAnn = enriched.filter((p) => p.annualizedReturn != null);
+          const avgAnn = validAnn.length > 0 ? validAnn.reduce((s, p) => s + (p.annualizedReturn ?? 0), 0) / validAnn.length : null;
+          const winRate = enriched.length > 0 ? Math.round((enriched.filter((p) => p.pnl > 0).length / enriched.length) * 100) : null;
+          const avgHoldingDays = enriched.filter((p) => p.daysSinceBuy).reduce((s, p) => s + (p.daysSinceBuy ?? 0), 0) / (enriched.filter((p) => p.daysSinceBuy).length || 1);
+          const bestAnn = validAnn.reduce((b, p) => (p.annualizedReturn ?? -Infinity) > (b.annualizedReturn ?? -Infinity) ? p : b, validAnn[0]);
+          const totalInvested = enriched.reduce((s, p) => s + p.investedValue, 0);
+          const totalValue = enriched.reduce((s, p) => s + p.currentValue, 0);
+          const totalPnlPct = totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested) * 100 : null;
+          return (
+            <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }} className="rounded-2xl p-5">
+              <p style={{ color: "var(--text-primary)" }} className="text-[13px] font-semibold mb-4">Performans İstatistikleri</p>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  {
+                    label: "Kazanma Oranı", value: winRate != null ? `${winRate}%` : "—",
+                    sub: `${enriched.filter((p) => p.pnl > 0).length} kâr / ${enriched.filter((p) => p.pnl < 0).length} zarar`,
+                    color: winRate != null ? (winRate >= 60 ? "var(--up)" : winRate >= 40 ? "var(--warn)" : "var(--down)") : "var(--text-primary)",
+                  },
+                  {
+                    label: "Ort. Yıllık Getiri", value: avgAnn != null ? fmtPct(avgAnn) : "—",
+                    sub: "pozisyon ortalaması",
+                    color: avgAnn != null ? (avgAnn >= 0 ? "var(--up)" : "var(--down)") : "var(--text-primary)",
+                  },
+                  {
+                    label: "Toplam Portföy Getirisi", value: fmtPct(totalPnlPct),
+                    sub: "alıştan bugüne",
+                    color: (totalPnlPct ?? 0) >= 0 ? "var(--up)" : "var(--down)",
+                  },
+                  {
+                    label: "Ort. Tutuş Süresi",
+                    value: avgHoldingDays >= 365 ? `${(avgHoldingDays / 365).toFixed(1)} yıl` : avgHoldingDays >= 30 ? `${Math.round(avgHoldingDays / 30)} ay` : `${Math.round(avgHoldingDays)} gün`,
+                    sub: bestAnn ? `En yüksek yıl. getiri: ${bestAnn.ticker.replace(".IS", "")}` : "—",
+                    color: "var(--text-primary)",
+                  },
+                ].map((stat, i) => (
+                  <div key={i} style={{ background: "var(--bg-tertiary)", borderRadius: 10 }} className="p-3">
+                    <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-semibold mb-1.5">{stat.label}</p>
+                    <p style={{ color: stat.color, fontSize: 20, fontWeight: 800, lineHeight: 1 }} className="tabular-nums">{stat.value}</p>
+                    <p style={{ color: "var(--text-muted)" }} className="text-[11px] mt-1">{stat.sub}</p>
+                  </div>
+                ))}
+              </div>
+              {/* Yıllık getiri karşılaştırması */}
+              {validAnn.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p style={{ color: "var(--text-muted)" }} className="text-[10px] uppercase tracking-wider font-semibold">Yıllık Getiri Karşılaştırması</p>
+                  {[...validAnn].sort((a, b) => (b.annualizedReturn ?? 0) - (a.annualizedReturn ?? 0)).map((pos) => {
+                    const maxAbs = validAnn.reduce((m, p) => Math.max(m, Math.abs(p.annualizedReturn ?? 0)), 0.001);
+                    const barPct = Math.min(Math.abs(pos.annualizedReturn ?? 0) / maxAbs, 1) * 100;
+                    const isPos = (pos.annualizedReturn ?? 0) >= 0;
+                    return (
+                      <div key={pos.id} className="flex items-center gap-3">
+                        <span style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, width: 60, flexShrink: 0 }} className="truncate">{pos.ticker.replace(".IS", "")}</span>
+                        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-tertiary)" }}>
+                          <div style={{ width: `${barPct}%`, height: "100%", background: isPos ? "var(--up)" : "var(--down)", borderRadius: 4 }} />
+                        </div>
+                        <span style={{ color: isPos ? "var(--up)" : "var(--down)", fontSize: 11, fontWeight: 700, width: 64, textAlign: "right" }} className="tabular-nums">
+                          {fmtPct(pos.annualizedReturn)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Çeşitlendirme Göstergesi */}
