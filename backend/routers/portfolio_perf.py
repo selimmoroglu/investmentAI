@@ -6,7 +6,7 @@ from ..services.cache import cache
 router = APIRouter()
 
 
-def _safe_float(v) -> float | None:
+def _safe_float(v):
     try:
         import math
         f = float(v)
