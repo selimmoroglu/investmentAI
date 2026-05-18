@@ -12,6 +12,7 @@ interface BarChartProps {
   color?: string;
   height?: number;
   formatValue?: (v: number) => string;
+  showGrowth?: boolean;
 }
 
 function fmtShort(v: number): string {
@@ -24,7 +25,7 @@ function fmtShort(v: number): string {
   return `${sign}${abs.toFixed(1)}`;
 }
 
-export function BarChart({ data, color = "var(--chart-blue)", height = 180, formatValue = fmtShort }: BarChartProps) {
+export function BarChart({ data, color = "var(--chart-blue)", height = 180, formatValue = fmtShort, showGrowth = false }: BarChartProps) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   if (!data.length) return null;
@@ -131,6 +132,26 @@ export function BarChart({ data, color = "var(--chart-blue)", height = 180, form
               >
                 {bar.label}
               </text>
+
+              {/* Growth % badge — shown between consecutive bars */}
+              {showGrowth && i > 0 && data[i - 1].value !== 0 && (() => {
+                const prev = data[i - 1].value;
+                const pct = ((bar.value - prev) / Math.abs(prev)) * 100;
+                const gColor = pct >= 0 ? "var(--up)" : "var(--down)";
+                const gx = x - gap / 2;
+                const gy = padTop - 4;
+                return (
+                  <text
+                    x={gx} y={gy}
+                    textAnchor="middle"
+                    fill={gColor}
+                    fontSize={8.5}
+                    fontWeight="600"
+                  >
+                    {pct >= 0 ? "▲" : "▼"}{Math.abs(pct).toFixed(0)}%
+                  </text>
+                );
+              })()}
             </g>
           );
         })}

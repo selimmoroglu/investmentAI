@@ -171,13 +171,16 @@ function computeScore(r: Ratios, q: Quote | null): ScoreResult {
     rawScore += 4;
   }
 
-  const finalScore = Math.max(0, Math.min(100, Math.round(rawScore)));
+  // Normalize: quality adjustments can push rawScore negative for truly cheap stocks.
+  // We clamp to minimum 5 so the progress bar is always visible, then bucket into labels.
+  const finalScore = Math.max(5, Math.min(100, Math.round(rawScore)));
 
-  let label = "Cazip";
-  let color = "var(--up)";
+  let label = "Çok Cazip";
+  let color = "#10b981";
   if (finalScore >= 75) { label = "Çok Pahalı"; color = "#ef4444"; }
   else if (finalScore >= 55) { label = "Pahalı"; color = "#f97316"; }
   else if (finalScore >= 35) { label = "Makul"; color = "#eab308"; }
+  else if (finalScore >= 18) { label = "Cazip"; color = "var(--up)"; }
 
   return { score: finalScore, label, color, details, dataCount };
 }
